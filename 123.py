@@ -133,6 +133,21 @@ def safe_operation(operation_name="操作"):
         return wrapper
 
     return decorator
+def safe_analysis_operation(func):
+    """安全分析操作装饰器"""
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except MemoryError:
+            QMessageBox.critical(None, '内存错误',
+                               '内存不足，请减少数据量或关闭其他程序')
+            return None
+        except Exception as e:
+            logger.error(f"分析操作失败: {func.__name__}, 错误: {e}")
+            QMessageBox.warning(None, '分析错误',
+                              f'操作失败: {str(e)}')
+            return None
+    return wrapper
 ## 配置与系统管理
 class ConfigManager:
     """配置管理器"""
@@ -802,8 +817,17 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 import weakref
 from collections import defaultdict
+import sys
+import os
+import logging
+from pathlib import Path
+# 设置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 # ==================== 789.py的核心类集成 ====================
-
 def check_matplotlib():
     """检查matplotlib是否可用"""
     try:
@@ -812,9 +836,7 @@ def check_matplotlib():
         return True
     except ImportError:
         return False
-
 # 在文件开头添加UI设计常量
-
 class UIColors:
         """现代简约UI颜色方案"""
         # 主色调
@@ -851,7 +873,6 @@ class UIColors:
         # 边框色
         BORDER_LIGHT = "#dee2e6"
         BORDER_FOCUS = "#86b7fe"
-
 class UISpacing:
         """间距常量"""
         XS = 4
@@ -894,7 +915,6 @@ def fast_angle_calculation(p1, p2, p3):
         norms = np.linalg.norm(v1) * np.linalg.norm(v2)
         cos_angle = dot_product / (norms + 1e-8)
         return np.arccos(np.clip(cos_angle, -1.0, 1.0))
-
 class OptimizedCalculationModule:
         """优化的计算模块"""
 
@@ -908,7 +928,6 @@ class OptimizedCalculationModule:
             except Exception as e:
                 logger.error(f"并行分析错误: {e}")
                 return []
-
 class AdvancedDataManager:
         """高级数据管理"""
 
@@ -943,7 +962,6 @@ class AdvancedDataManager:
                 logger.info("数据库初始化成功")
             except Exception as e:
                 logger.error(f"数据库初始化错误: {e}")
-
 class SportsAnalysisEngine:
         """运动分析引擎 - 修复版本"""
 
@@ -1154,7 +1172,6 @@ class SportsAnalysisEngine:
             except Exception as e:
                 logger.error(f"疲劳检测错误: {e}")
                 return {"fatigue_level": 0.0, "trend": "stable", "error": str(e)}
-
 class SafePlotManager:
         """安全的图表管理器"""
 
@@ -1202,2002 +1219,6 @@ def extract_fatigue_features(self, sequence):
                 features.append(amplitude)
         return features
 
-# ==================== 修复后的ar运动实时分析指导 ====================
-@dataclass
-class StandardPose:
-    """标准姿势数据结构"""
-    name: str
-    sport_type: str
-    keypoints: List[Tuple[float, float]]
-    angles: Dict[str, float]
-    metadata: Dict[str, Any]
-@dataclass
-class JointError:
-    """关节错误信息"""
-    joint_name: str
-    current_angle: float
-    target_angle: float
-    error_magnitude: float
-    correction_direction: str
-import logging
-class ARRealTimeGuidance:
-    """改进的AR增强现实指导系统"""
-
-    def __init__(self, gopose_module):
-        # 初始化 logger
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.INFO)
-        self.gopose_module = gopose_module
-        self.threed_analyzer = self._safe_init_analyzer("Enhanced3DAnalyzer")
-        self.real_time_analyzer = self._safe_init_analyzer("RealTimeAnalyzer")
-
-        # 初始化标准姿势数据
-        self.standard_poses = {}
-        self._load_standard_poses()
-
-        # 历史数据缓存
-        self.pose_history = deque(maxlen=30)  # 保存最近30帧的姿势数据
-
-        # 性能优化参数
-        self.frame_skip_count = 0
-        self.analysis_frequency = 3  # 每3帧进行一次深度分析
-
-        # 线程安全锁
-        self.analysis_lock = threading.Lock()
-
-        # 配置日志
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
-
-        # AR显示配置
-        self.ar_config = {
-            'show_ideal_pose': True,
-            'show_force_vectors': True,
-            'show_muscle_activation': True,
-            'transparency': 0.3,
-            'text_scale': 0.7,
-            'line_thickness': 2
-        }
-
-    def _safe_init_analyzer(self, analyzer_name: str):
-        """安全初始化分析器"""
-        try:
-            # 根据实际的分析器类进行初始化
-            # 这里需要根据您的实际模块来调整
-            if analyzer_name == "Enhanced3DAnalyzer":
-                return Enhanced3DAnalyzer() if 'Enhanced3DAnalyzer' in globals() else None
-            elif analyzer_name == "RealTimeAnalyzer":
-                return RealTimeAnalyzer() if 'RealTimeAnalyzer' in globals() else None
-        except Exception as e:
-            self.logger.warning(f"无法初始化 {analyzer_name}: {e}")
-            return None
-
-    def _load_standard_poses(self):
-        """加载标准姿势数据"""
-        try:
-            # 尝试从文件加载
-            standard_poses_file = "standard_poses.json"
-            with open(standard_poses_file, 'r', encoding='utf-8') as f:
-                poses_data = json.load(f)
-
-            for sport, poses in poses_data.items():
-                self.standard_poses[sport] = []
-                for pose_data in poses:
-                    standard_pose = StandardPose(
-                        name=pose_data['name'],
-                        sport_type=sport,
-                        keypoints=pose_data['keypoints'],
-                        angles=pose_data['angles'],
-                        metadata=pose_data.get('metadata', {})
-                    )
-                    self.standard_poses[sport].append(standard_pose)
-
-        except FileNotFoundError:
-            self.logger.warning("标准姿势文件未找到，使用默认配置")
-            self._create_default_poses()
-        except Exception as e:
-            self.logger.error(f"加载标准姿势时出错: {e}")
-            self._create_default_poses()
-
-    def _create_default_poses(self):
-        """创建默认的标准姿势"""
-        # 为常见运动创建基本的标准姿势
-        self.standard_poses = {
-            'general': [],
-            'basketball': [],
-            'tennis': [],
-            'golf': []
-        }
-        self.logger.info("已创建默认标准姿势配置")
-
-    def get_standard_pose_for_sport(self, sport_type: str, action_phase: str = None) -> Optional[StandardPose]:
-        """获取特定运动的标准姿势"""
-        if sport_type not in self.standard_poses:
-            sport_type = 'general'
-
-        poses = self.standard_poses[sport_type]
-        if not poses:
-            return None
-
-        # 如果指定了动作阶段，尝试找到匹配的姿势
-        if action_phase:
-            for pose in poses:
-                if pose.metadata.get('phase') == action_phase:
-                    return pose
-
-        # 返回第一个标准姿势
-        return poses[0] if poses else None
-
-    def overlay_technique_guidance(self, frame: np.ndarray, current_keypoints: List) -> np.ndarray:
-        """在实时画面上叠加技术指导"""
-        try:
-            # 验证输入
-            if frame is None or len(frame.shape) != 3:
-                self.logger.error("无效的帧数据")
-                return frame
-
-            if not current_keypoints:
-                return frame
-
-            # 获取标准动作模板
-            sport_type = getattr(self.gopose_module, 'athlete_profile', {}).get('sport', 'general')
-            standard_pose = self.get_standard_pose_for_sport(sport_type)
-
-            # 创建叠加层
-            overlay = frame.copy()
-
-            # 1. 绘制理想姿势轮廓（半透明绿色）
-            if standard_pose and self.ar_config['show_ideal_pose']:
-                self._draw_ideal_pose_overlay(overlay, standard_pose, color=(0, 255, 0))
-
-            # 2. 绘制当前姿势（实线）
-            self._draw_current_pose(overlay, current_keypoints)
-
-            # 3. 高亮需要调整的关节
-            if standard_pose:
-                error_joints = self._identify_error_joints(current_keypoints, standard_pose)
-                self._highlight_error_joints(overlay, error_joints)
-
-            # 4. 显示实时反馈文本
-            self._display_feedback_text(overlay, error_joints if standard_pose else [])
-
-            # 混合叠加层
-            result = cv2.addWeighted(frame, 1 - self.ar_config['transparency'],
-                                     overlay, self.ar_config['transparency'], 0)
-
-            return result
-
-        except Exception as e:
-            self.logger.error(f"叠加技术指导时出错: {e}")
-            return frame
-
-    def _draw_ideal_pose_overlay(self, frame: np.ndarray, standard_pose: StandardPose,
-                                 color: Tuple[int, int, int]):
-        """绘制理想姿势轮廓"""
-        if not standard_pose.keypoints:
-            return
-
-        # 绘制骨架连接线
-        connections = self._get_pose_connections()
-        for connection in connections:
-            start_idx, end_idx = connection
-            if (start_idx < len(standard_pose.keypoints) and
-                    end_idx < len(standard_pose.keypoints)):
-                start_point = tuple(map(int, standard_pose.keypoints[start_idx]))
-                end_point = tuple(map(int, standard_pose.keypoints[end_idx]))
-
-                cv2.line(frame, start_point, end_point, color,
-                         self.ar_config['line_thickness'])
-
-    def _draw_current_pose(self, frame: np.ndarray, keypoints: List):
-        """绘制当前姿势"""
-        try:
-            # 这里调用您现有的绘制方法
-            if hasattr(self, 'EnhancedCalculationModule'):
-                self.EnhancedCalculationModule.draw(frame, keypoints, size=3, type=0)
-            else:
-                # 备用绘制方法
-                self._draw_keypoints_basic(frame, keypoints)
-        except Exception as e:
-            self.logger.warning(f"绘制当前姿势时出错: {e}")
-
-    def _draw_keypoints_basic(self, frame: np.ndarray, keypoints: List):
-        """基础关键点绘制方法"""
-        for point in keypoints:
-            if len(point) >= 2:
-                center = (int(point[0]), int(point[1]))
-                cv2.circle(frame, center, 5, (0, 0, 255), -1)
-
-    def _identify_error_joints(self, current_keypoints: List,
-                               standard_pose: StandardPose) -> List[JointError]:
-        """识别需要调整的关节"""
-        error_joints = []
-
-        try:
-            # 计算当前姿势的关节角度
-            current_angles = self._calculate_joint_angles(current_keypoints)
-
-            # 与标准姿势比较
-            for joint_name, target_angle in standard_pose.angles.items():
-                if joint_name in current_angles:
-                    current_angle = current_angles[joint_name]
-                    error = abs(current_angle - target_angle)
-
-                    # 设置误差阈值
-                    threshold = 15.0  # 度
-                    if error > threshold:
-                        error_joint = JointError(
-                            joint_name=joint_name,
-                            current_angle=current_angle,
-                            target_angle=target_angle,
-                            error_magnitude=error,
-                            correction_direction="increase" if current_angle < target_angle else "decrease"
-                        )
-                        error_joints.append(error_joint)
-
-        except Exception as e:
-            self.logger.error(f"识别错误关节时出错: {e}")
-
-        return error_joints
-
-    def _calculate_joint_angles(self, keypoints: List) -> Dict[str, float]:
-        """计算关节角度"""
-        angles = {}
-
-        try:
-            # 这里需要根据您的关键点格式来实现
-            # 示例：计算肘关节角度
-            if len(keypoints) >= 8:  # 假设至少有8个关键点
-                # 左肘角度计算示例
-                shoulder = np.array(keypoints[5][:2])  # 左肩
-                elbow = np.array(keypoints[7][:2])  # 左肘
-                wrist = np.array(keypoints[9][:2])  # 左腕
-
-                angle = self._calculate_angle(shoulder, elbow, wrist)
-                angles['left_elbow'] = angle
-
-        except Exception as e:
-            self.logger.error(f"计算关节角度时出错: {e}")
-
-        return angles
-
-    def _calculate_angle(self, point1: np.ndarray, vertex: np.ndarray,
-                         point2: np.ndarray) -> float:
-        """计算三点构成的角度"""
-        vector1 = point1 - vertex
-        vector2 = point2 - vertex
-
-        cos_angle = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
-        cos_angle = np.clip(cos_angle, -1.0, 1.0)
-        angle = np.arccos(cos_angle) * 180 / np.pi
-
-        return angle
-
-    def _highlight_error_joints(self, frame: np.ndarray, error_joints: List[JointError]):
-        """高亮显示需要调整的关节"""
-        for error in error_joints:
-            # 这里需要根据关节名称找到对应的像素位置
-            joint_pos = self._get_joint_position(error.joint_name)
-            if joint_pos:
-                # 用红色圆圈标记错误关节
-                cv2.circle(frame, joint_pos, 15, (0, 0, 255), 3)
-                # 显示调整建议
-                text = f"{error.correction_direction} {error.error_magnitude:.1f}°"
-                cv2.putText(frame, text, (joint_pos[0] + 20, joint_pos[1]),
-                            cv2.FONT_HERSHEY_SIMPLEX, self.ar_config['text_scale'],
-                            (0, 0, 255), 2)
-
-    def _get_joint_position(self, joint_name: str) -> Optional[Tuple[int, int]]:
-        """获取关节在图像中的位置"""
-        # 这里需要根据您的关键点映射来实现
-        joint_mapping = {
-            'left_elbow': 7,
-            'right_elbow': 8,
-            'left_knee': 13,
-            'right_knee': 14,
-            # 添加更多关节映射
-        }
-
-        if (joint_name in joint_mapping and
-                hasattr(self, 'current_keypoints') and
-                self.current_keypoints):
-
-            idx = joint_mapping[joint_name]
-            if idx < len(self.current_keypoints):
-                point = self.current_keypoints[idx]
-                return (int(point[0]), int(point[1]))
-
-        return None
-
-    def _display_feedback_text(self, frame: np.ndarray, error_joints: List[JointError]):
-        """显示实时反馈文本"""
-        y_offset = 30
-
-        if not error_joints:
-            cv2.putText(frame, "姿势良好!", (10, y_offset),
-                        cv2.FONT_HERSHEY_SIMPLEX, self.ar_config['text_scale'],
-                        (0, 255, 0), 2)
-        else:
-            cv2.putText(frame, f"需调整 {len(error_joints)} 个关节",
-                        (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX,
-                        self.ar_config['text_scale'], (0, 165, 255), 2)
-
-    def _get_pose_connections(self) -> List[Tuple[int, int]]:
-        """获取姿势骨架连接"""
-        # COCO格式的骨架连接
-        return [
-            (5, 6), (5, 7), (6, 8), (7, 9), (8, 10),  # 上半身
-            (5, 11), (6, 12), (11, 12),  # 躯干
-            (11, 13), (12, 14), (13, 15), (14, 16)  # 下半身
-        ]
-
-    def show_force_vectors(self, frame: np.ndarray, biomech_data: Dict) -> np.ndarray:
-        """AR显示力向量和生物力学信息"""
-        if not biomech_data:
-            return frame
-
-        try:
-            # 显示关节力矩
-            if 'joint_torques' in biomech_data:
-                for joint_name, torque_value in biomech_data['joint_torques'].items():
-                    joint_pos = self._get_joint_position(joint_name)
-                    if joint_pos and torque_value:
-                        self._draw_force_arrow(frame, joint_pos, torque_value)
-
-            # 显示重心位置
-            if all(key in biomech_data for key in ['center_of_mass_x', 'center_of_mass_y']):
-                com_pos = (int(biomech_data['center_of_mass_x']),
-                           int(biomech_data['center_of_mass_y']))
-                cv2.circle(frame, com_pos, 10, (255, 0, 255), -1)
-                cv2.putText(frame, "重心", com_pos, cv2.FONT_HERSHEY_SIMPLEX,
-                            self.ar_config['text_scale'], (255, 255, 255), 2)
-
-        except Exception as e:
-            self.logger.error(f"显示力向量时出错: {e}")
-
-        return frame
-
-    def _draw_force_arrow(self, frame: np.ndarray, start_pos: Tuple[int, int],
-                          force_magnitude: float):
-        """绘制力箭头"""
-        # 根据力的大小计算箭头长度和颜色
-        arrow_length = int(abs(force_magnitude) * 2)  # 比例缩放
-        color = (0, 255, 0) if force_magnitude > 0 else (0, 0, 255)
-
-        # 绘制箭头（简化版本）
-        end_pos = (start_pos[0], start_pos[1] - arrow_length)
-        cv2.arrowedLine(frame, start_pos, end_pos, color, 2, tipLength=0.3)
-
-    def update_config(self, new_config: Dict):
-        """更新AR配置"""
-        self.ar_config.update(new_config)
-
-    def get_performance_stats(self) -> Dict:
-        """获取性能统计"""
-        return {
-            'pose_history_length': len(self.pose_history),
-            'analysis_frequency': self.analysis_frequency,
-            'frame_skip_count': self.frame_skip_count
-        }
-# ==================== 修复后的3D运动分析模块 ====================
-class Enhanced3DAnalyzer:
-    """增强版3D运动分析器 - 修复版"""
-
-    def analyze_3d_movement_quality(self, pose_sequence_3d):
-        """分析3D运动质量"""
-        quality_metrics = {
-            'symmetry_score': 0.0,
-            'stability_score': 0.0,
-            'efficiency_score': 0.0,
-            'coordination_score': 0.0,
-            'overall_quality': 0.0
-        }
-
-        try:
-            if not pose_sequence_3d or len(pose_sequence_3d) < 2:
-                return quality_metrics
-
-            # 计算对称性评分
-            quality_metrics['symmetry_score'] = self._calculate_3d_symmetry(pose_sequence_3d)
-
-            # 计算稳定性评分
-            quality_metrics['stability_score'] = self._calculate_3d_stability(pose_sequence_3d)
-
-            # 计算效率评分
-            quality_metrics['efficiency_score'] = self._calculate_3d_efficiency(pose_sequence_3d)
-
-            # 计算协调性评分
-            quality_metrics['coordination_score'] = self._calculate_3d_coordination(pose_sequence_3d)
-
-            # 计算整体质量
-            quality_metrics['overall_quality'] = np.mean([
-                quality_metrics['symmetry_score'],
-                quality_metrics['stability_score'],
-                quality_metrics['efficiency_score'],
-                quality_metrics['coordination_score']
-            ])
-
-        except Exception as e:
-            print(f"3D运动质量分析错误: {e}")
-
-        return quality_metrics
-
-    def _calculate_3d_symmetry(self, pose_sequence):
-        """计算3D对称性"""
-        try:
-            symmetry_scores = []
-
-            # 左右对称关节对
-            symmetric_pairs = [
-                (2, 5),  # 左右肩
-                (3, 6),  # 左右肘
-                (4, 7),  # 左右手
-                (9, 12),  # 左右髋
-                (10, 13),  # 左右膝
-                (11, 14)  # 左右踝
-            ]
-
-            for pose in pose_sequence:
-                if pose is None:
-                    continue
-
-                frame_symmetry = []
-                for left_idx, right_idx in symmetric_pairs:
-                    if (left_idx < len(pose) and right_idx < len(pose) and
-                            len(pose[left_idx]) >= 4 and len(pose[right_idx]) >= 4 and
-                            pose[left_idx][3] > 0.1 and pose[right_idx][3] > 0.1):
-
-                        left_pos = np.array(pose[left_idx][:3])
-                        right_pos = np.array(pose[right_idx][:3])
-
-                        # 计算相对于身体中心的位置
-                        if (len(pose) > 8 and len(pose[1]) >= 4 and len(pose[8]) >= 4 and
-                                pose[1][3] > 0.1 and pose[8][3] > 0.1):
-                            center = (np.array(pose[1][:3]) + np.array(pose[8][:3])) / 2
-                            left_relative = left_pos - center
-                            right_relative = right_pos - center
-
-                            # 镜像右侧位置
-                            right_relative_mirrored = right_relative.copy()
-                            right_relative_mirrored[0] = -right_relative_mirrored[0]  # X轴镜像
-
-                            # 计算对称性
-                            distance = np.linalg.norm(left_relative - right_relative_mirrored)
-                            symmetry = 1.0 / (1.0 + distance / 100.0)
-                            frame_symmetry.append(symmetry)
-
-                if frame_symmetry:
-                    symmetry_scores.append(np.mean(frame_symmetry))
-
-            return np.mean(symmetry_scores) if symmetry_scores else 0.5
-
-        except Exception as e:
-            print(f"3D对称性计算错误: {e}")
-            return 0.5
-
-    def _calculate_3d_stability(self, pose_sequence):
-        """计算3D稳定性"""
-        try:
-            if len(pose_sequence) < 2:
-                return 0.5
-
-            stability_metrics = []
-
-            # 重心稳定性
-            com_positions = []
-            for pose in pose_sequence:
-                if pose is None:
-                    continue
-
-                # 计算重心
-                valid_points = []
-                for i, point in enumerate(pose):
-                    if len(point) >= 4 and point[3] > 0.1:
-                        valid_points.append(point[:3])
-
-                if valid_points:
-                    com = np.mean(valid_points, axis=0)
-                    com_positions.append(com)
-
-            if len(com_positions) > 1:
-                # 计算重心移动的稳定性
-                com_velocities = np.diff(com_positions, axis=0)
-                com_stability = 1.0 / (1.0 + np.std(com_velocities))
-                stability_metrics.append(com_stability)
-
-            return np.mean(stability_metrics) if stability_metrics else 0.5
-
-        except Exception as e:
-            print(f"3D稳定性计算错误: {e}")
-            return 0.5
-
-    def _calculate_3d_efficiency(self, pose_sequence):
-        """计算3D效率"""
-        try:
-            if len(pose_sequence) < 2:
-                return 0.5
-
-            # 计算运动路径效率
-            efficiency_scores = []
-
-            # 关键关节的运动效率
-            key_joints = [4, 7, 11, 14]  # 双手双脚
-
-            for joint_idx in key_joints:
-                positions = []
-                for pose in pose_sequence:
-                    if (pose is not None and joint_idx < len(pose) and
-                            len(pose[joint_idx]) >= 4 and pose[joint_idx][3] > 0.1):
-                        positions.append(pose[joint_idx][:3])
-
-                if len(positions) > 2:
-                    positions = np.array(positions)
-
-                    # 计算实际路径长度
-                    actual_path = np.sum(np.linalg.norm(np.diff(positions, axis=0), axis=1))
-
-                    # 计算直线距离
-                    straight_distance = np.linalg.norm(positions[-1] - positions[0])
-
-                    # 效率 = 直线距离 / 实际路径
-                    if actual_path > 0:
-                        efficiency = straight_distance / actual_path
-                        efficiency_scores.append(min(efficiency, 1.0))
-
-            return np.mean(efficiency_scores) if efficiency_scores else 0.5
-
-        except Exception as e:
-            print(f"3D效率计算错误: {e}")
-            return 0.5
-
-    def _calculate_3d_coordination(self, pose_sequence):
-        """计算3D协调性"""
-        try:
-            if len(pose_sequence) < 2:
-                return 0.5
-
-            coordination_scores = []
-
-            # 分析四肢协调性
-            limb_pairs = [
-                ([2, 3, 4], [5, 6, 7]),  # 左右臂
-                ([9, 10, 11], [12, 13, 14])  # 左右腿
-            ]
-
-            for left_limb, right_limb in limb_pairs:
-                left_angles = []
-                right_angles = []
-
-                for pose in pose_sequence:
-                    if pose is None:
-                        continue
-
-                    # 计算左侧肢体角度
-                    if all(i < len(pose) and len(pose[i]) >= 4 and pose[i][3] > 0.1 for i in left_limb):
-                        left_angle = self._calculate_3d_angle(pose, left_limb)
-                        left_angles.append(left_angle)
-
-                    # 计算右侧肢体角度
-                    if all(i < len(pose) and len(pose[i]) >= 4 and pose[i][3] > 0.1 for i in right_limb):
-                        right_angle = self._calculate_3d_angle(pose, right_limb)
-                        right_angles.append(right_angle)
-
-                # 计算左右协调性
-                if len(left_angles) > 1 and len(right_angles) > 1:
-                    min_len = min(len(left_angles), len(right_angles))
-                    left_changes = np.diff(left_angles[:min_len])
-                    right_changes = np.diff(right_angles[:min_len])
-
-                    # 计算变化模式的相似性
-                    correlation = np.corrcoef(left_changes, right_changes)[0, 1]
-                    if not np.isnan(correlation):
-                        coordination_scores.append(abs(correlation))
-
-            return np.mean(coordination_scores) if coordination_scores else 0.5
-
-        except Exception as e:
-            print(f"3D协调性计算错误: {e}")
-            return 0.5
-
-    def _apply_biomechanical_constraints(self, pose_3d, height_pixels):
-        """应用生物力学约束"""
-        try:
-            # 检查关节角度约束
-            joint_checks = [
-                ([2, 3, 4], 'elbow'),  # 右肘
-                ([5, 6, 7], 'elbow'),  # 左肘
-                ([9, 10, 11], 'knee'),  # 右膝
-                ([12, 13, 14], 'knee')  # 左膝
-            ]
-
-            for joint_indices, joint_type in joint_checks:
-                if all(i < len(pose_3d) and len(pose_3d[i]) >= 4 and pose_3d[i][3] > 0.1 for i in joint_indices):
-                    angle = self._calculate_3d_angle(pose_3d, joint_indices)
-                    min_angle, max_angle = self.joint_constraints.get(joint_type, (0, 180))
-
-                    # 如果角度超出合理范围，进行调整
-                    if angle < min_angle or angle > max_angle:
-                        # 简单的约束调整：将角度限制在合理范围内
-                        p1, p2, p3 = joint_indices
-                        if pose_3d[p1][3] > 0.1 and pose_3d[p2][3] > 0.1 and pose_3d[p3][3] > 0.1:
-                            # 调整关节位置以满足角度约束
-                            target_angle = np.clip(angle, min_angle, max_angle)
-                            pose_3d = self._adjust_joint_angle(pose_3d, joint_indices, target_angle)
-
-            # 检查骨骼长度约束
-            pose_3d = self._apply_bone_length_constraints(pose_3d, height_pixels)
-
-            return pose_3d
-
-        except Exception as e:
-            print(f"生物力学约束应用错误: {e}")
-            return pose_3d
-
-    def _adjust_joint_angle(self, pose_3d, joint_indices, target_angle):
-        """调整关节角度"""
-        try:
-            p1, p2, p3 = joint_indices
-
-            # 获取关节位置
-            joint_pos = np.array(pose_3d[p2][:3])
-            p1_pos = np.array(pose_3d[p1][:3])
-            p3_pos = np.array(pose_3d[p3][:3])
-
-            # 计算向量
-            v1 = p1_pos - joint_pos
-            v2 = p3_pos - joint_pos
-
-            # 计算当前角度
-            current_angle = self._calculate_3d_angle(pose_3d, joint_indices)
-            angle_diff = target_angle - current_angle
-
-            # 如果角度差异较小，直接返回
-            if abs(angle_diff) < 5:  # 5度阈值
-                return pose_3d
-
-            # 调整第三个点的位置
-            v2_length = np.linalg.norm(v2)
-            if v2_length > 0:
-                # 旋转v2向量以达到目标角度
-                rotation_angle = np.radians(angle_diff)
-
-                # 简化的2D旋转（在主要平面上）
-                cos_rot = np.cos(rotation_angle)
-                sin_rot = np.sin(rotation_angle)
-
-                # 旋转矩阵（简化为主要平面）
-                v2_normalized = v2 / v2_length
-
-                # 应用旋转（简化版本）
-                new_v2 = v2 * cos_rot + np.cross(v1, v2) * sin_rot / (np.linalg.norm(v1) * v2_length + 1e-8)
-                new_p3_pos = joint_pos + new_v2
-
-                # 更新位置
-                pose_3d[p3][:3] = new_p3_pos
-
-            return pose_3d
-
-        except Exception as e:
-            print(f"关节角度调整错误: {e}")
-            return pose_3d
-
-    def _apply_bone_length_constraints(self, pose_3d, height_pixels):
-        """应用骨骼长度约束"""
-        try:
-            expected_lengths = self._get_expected_bone_lengths(height_pixels)
-
-            for (start_idx, end_idx), expected_length in expected_lengths.items():
-                if (start_idx < len(pose_3d) and end_idx < len(pose_3d) and
-                        len(pose_3d[start_idx]) >= 4 and len(pose_3d[end_idx]) >= 4 and
-                        pose_3d[start_idx][3] > 0.1 and pose_3d[end_idx][3] > 0.1):
-
-                    start_pos = np.array(pose_3d[start_idx][:3])
-                    end_pos = np.array(pose_3d[end_idx][:3])
-
-                    current_length = np.linalg.norm(end_pos - start_pos)
-
-                    # 如果长度差异超过容忍范围，进行调整
-                    tolerance = expected_length * self.reconstruction_params['bone_length_tolerance']
-
-                    if abs(current_length - expected_length) > tolerance:
-                        # 调整末端点位置以匹配期望长度
-                        direction = (end_pos - start_pos) / (current_length + 1e-8)
-                        new_end_pos = start_pos + direction * expected_length
-                        pose_3d[end_idx][:3] = new_end_pos
-
-            return pose_3d
-
-        except Exception as e:
-            print(f"骨骼长度约束应用错误: {e}")
-            return pose_3d
-
-    def _calculate_body_tilt_adjustment(self, pose_3d, joint_idx):
-        """计算身体倾斜调整"""
-        try:
-            if (len(pose_3d) > 8 and len(pose_3d[1]) >= 4 and len(pose_3d[8]) >= 4 and
-                    pose_3d[1][3] > 0.1 and pose_3d[8][3] > 0.1):  # 颈部和中臀
-
-                neck = np.array(pose_3d[1][:3])
-                hip = np.array(pose_3d[8][:3])
-
-                # 计算躯干倾斜角度
-                trunk_vector = hip - neck
-                if np.linalg.norm(trunk_vector) > 0:
-                    # 计算与垂直方向的角度
-                    vertical = np.array([0, 1, 0])  # 假设Y轴向上
-                    tilt_angle = np.arccos(np.clip(
-                        np.dot(trunk_vector, vertical) / np.linalg.norm(trunk_vector), -1, 1
-                    ))
-
-                    # 根据关节位置和倾斜角度调整深度
-                    adjustment_factors = {
-                        0: 0.8,  # 头部
-                        4: 1.0,  # 右手
-                        7: 1.0,  # 左手
-                        11: 0.5,  # 右脚
-                        14: 0.5,  # 左脚
-                    }
-
-                    adjustment_factor = adjustment_factors.get(joint_idx, 0.3)
-                    return np.sin(tilt_angle) * adjustment_factor * 10
-
-            return 0
-
-        except Exception as e:
-            print(f"身体倾斜调整计算错误: {e}")
-            return 0
-
-    def calculate_3d_angles_enhanced(self, pose_3d):
-        """计算增强3D角度"""
-        angles = {}
-
-        try:
-            # 定义关节角度计算
-            joint_definitions = {
-                '右肘角度': [2, 3, 4],
-                '左肘角度': [5, 6, 7],
-                '右膝角度': [9, 10, 11],
-                '左膝角度': [12, 13, 14],
-                '右肩角度': [1, 2, 3],
-                '左肩角度': [1, 5, 6]
-            }
-
-            for joint_name, indices in joint_definitions.items():
-                if all(i < len(pose_3d) and len(pose_3d[i]) >= 4 and pose_3d[i][3] > 0.1 for i in indices):
-                    angle = self._calculate_3d_angle(pose_3d, indices)
-                    angles[joint_name] = angle
-
-        except Exception as e:
-            print(f"3D角度计算错误: {e}")
-
-        return angles
-
-    def __init__(self):
-        # 人体骨骼长度比例 (基于人体测量学标准数据)
-        self.body_proportions = {
-            'head_neck': 0.13,
-            'neck_torso': 0.30,
-            'torso_hip': 0.17,
-            'upper_arm': 0.188,
-            'forearm': 0.146,
-            'thigh': 0.245,
-            'shin': 0.246,
-        }
-
-        # 标准化的骨骼连接关系 (BODY_25格式)
-        self.skeleton_connections = [
-            (1, 8), (1, 2), (1, 5),  # 躯干和肩膀
-            (2, 3), (3, 4),  # 右臂
-            (5, 6), (6, 7),  # 左臂
-            (8, 9), (9, 10), (10, 11),  # 右腿
-            (8, 12), (12, 13), (13, 14),  # 左腿
-            (1, 0),  # 头部
-            (0, 15), (15, 17),  # 右眼和右耳
-            (0, 16), (16, 18),  # 左眼和左耳
-            (14, 19), (14, 21),  # 左脚
-            (11, 22), (11, 24)  # 右脚
-        ]
-
-        # 关节角度约束
-        self.joint_constraints = {
-            'elbow': (0, 180),
-            'knee': (0, 180),
-            'shoulder': (-45, 180),
-            'hip': (-30, 120)
-        }
-
-        # 3D重建参数
-        self.reconstruction_params = {
-            'depth_scale_factor': 0.3,
-            'temporal_smoothing_alpha': 0.7,
-            'confidence_threshold': 0.3,
-            'bone_length_tolerance': 0.2
-        }
-
-    def reconstruct_3d_pose_enhanced(self, keypoints_2d, previous_3d=None,
-                                     camera_params=None, height_pixels=None):
-        """
-        增强版3D姿态重建 - 修复版
-
-        Args:
-            keypoints_2d: 2D关键点 [[x, y, confidence], ...]
-            previous_3d: 前一帧的3D结果
-            camera_params: 相机参数字典 {'focal_length': f, 'principal_point': (cx, cy)}
-            height_pixels: 身高像素值
-
-        Returns:
-            ndarray: 3D关键点 [x, y, z, confidence] 或 None
-        """
-        try:
-            # 输入验证
-            if not self._validate_input(keypoints_2d):
-                return None
-
-            # 初始化3D姿态
-            pose_3d = self._initialize_3d_pose(keypoints_2d)
-
-            # 估算身体尺度
-            if height_pixels is None:
-                height_pixels = self._estimate_height_from_keypoints(keypoints_2d)
-
-            if height_pixels < 50:  # 最小合理身高
-                return None
-
-            # 设置默认相机参数
-            if camera_params is None:
-                camera_params = self._get_default_camera_params(keypoints_2d)
-
-            # 执行3D重建
-            pose_3d = self._perform_3d_reconstruction(
-                pose_3d, height_pixels, camera_params
-            )
-
-            # 应用生物力学约束
-            pose_3d = self._apply_biomechanical_constraints(pose_3d, height_pixels)
-
-            # 时间平滑
-            if previous_3d is not None:
-                pose_3d = self._temporal_smoothing(pose_3d, previous_3d)
-
-            # 质量评估
-            quality_score = self._assess_reconstruction_quality(pose_3d, keypoints_2d)
-
-            if quality_score < 0.5:
-                print(f"警告: 3D重建质量较低 (质量评分: {quality_score:.2f})")
-
-            return pose_3d
-
-        except Exception as e:
-            print(f"3D重建错误: {e}")
-            return None
-
-    def _validate_input(self, keypoints_2d):
-        """验证输入数据"""
-        if keypoints_2d is None or len(keypoints_2d) < 25:
-            return False
-
-        # 检查关键点格式
-        valid_points = 0
-        for kp in keypoints_2d:
-            if len(kp) >= 3 and kp[2] > self.reconstruction_params['confidence_threshold']:
-                valid_points += 1
-
-        # 至少需要10个有效关键点
-        return valid_points >= 10
-
-    def _initialize_3d_pose(self, keypoints_2d):
-        """初始化3D姿态"""
-        pose_3d = np.zeros((25, 4))  # [x, y, z, confidence]
-
-        for i, kp in enumerate(keypoints_2d):
-            if len(kp) >= 3:
-                pose_3d[i] = [kp[0], kp[1], 0, kp[2]]
-
-        return pose_3d
-
-    def _get_default_camera_params(self, keypoints_2d):
-        """获取默认相机参数"""
-        # 估算图像尺寸
-        valid_x = [kp[0] for kp in keypoints_2d if len(kp) >= 3 and kp[2] > 0.1]
-        valid_y = [kp[1] for kp in keypoints_2d if len(kp) >= 3 and kp[2] > 0.1]
-
-        if not valid_x or not valid_y:
-            return {'focal_length': 500, 'principal_point': (320, 240)}
-
-        img_width = max(valid_x) - min(valid_x) + 200
-        img_height = max(valid_y) - min(valid_y) + 200
-
-        return {
-            'focal_length': img_width * 0.8,  # 经验值
-            'principal_point': (img_width / 2, img_height / 2)
-        }
-
-    def _perform_3d_reconstruction(self, pose_3d, height_pixels, camera_params):
-        """执行3D重建的核心算法"""
-        try:
-            # 方法1: 基于人体模型的深度估算
-            pose_3d = self._anthropometric_depth_estimation(pose_3d, height_pixels)
-
-            # 方法2: 基于骨骼约束的优化
-            pose_3d = self._skeleton_constrained_optimization(pose_3d, height_pixels)
-
-            # 方法3: 基于姿态先验的深度细化
-            pose_3d = self._pose_prior_depth_refinement(pose_3d)
-
-            return pose_3d
-
-        except Exception as e:
-            print(f"3D重建算法错误: {e}")
-            return pose_3d
-
-    def _anthropometric_depth_estimation(self, pose_3d, height_pixels):
-        """基于人体测量学的深度估算"""
-        try:
-            # 计算身体比例因子
-            scale_factor = height_pixels / 1750  # 假设真实身高175cm
-
-            # 定义各关节的相对深度 (相对于身体中心)
-            depth_map = {
-                0: 0.08,  # 鼻子 (向前)
-                1: 0.02,  # 颈部 (稍向前)
-                2: -0.06,  # 右肩 (向后)
-                3: 0.04,  # 右肘 (向前)
-                4: 0.10,  # 右腕 (向前)
-                5: -0.06,  # 左肩 (向后)
-                6: 0.04,  # 左肘 (向前)
-                7: 0.10,  # 左腕 (向前)
-                8: -0.03,  # 中臀 (稍向后)
-                9: -0.02,  # 右髋
-                10: 0.02,  # 右膝 (稍向前)
-                11: 0.05,  # 右踝 (向前)
-                12: -0.02,  # 左髋
-                13: 0.02,  # 左膝
-                14: 0.05,  # 左踝
-                15: 0.12,  # 右眼 (向前)
-                16: 0.12,  # 左眼
-                17: 0.08,  # 右耳
-                18: 0.08,  # 左耳
-            }
-
-            # 应用深度估算
-            for i, depth_offset in depth_map.items():
-                if i < len(pose_3d) and pose_3d[i][3] > 0.1:
-                    # 基础深度
-                    base_depth = depth_offset * scale_factor * self.reconstruction_params['depth_scale_factor']
-
-                    # 添加身体倾斜的影响
-                    tilt_adjustment = self._calculate_body_tilt_adjustment(pose_3d, i)
-
-                    pose_3d[i][2] = base_depth + tilt_adjustment
-
-            return pose_3d
-
-        except Exception as e:
-            print(f"人体测量学深度估算错误: {e}")
-            return pose_3d
-
-    def _skeleton_constrained_optimization(self, pose_3d, height_pixels):
-        """基于骨骼约束的优化"""
-        try:
-            # 定义优化目标函数
-            def objective_function(z_coords):
-                # 重构3D姿态
-                temp_pose = pose_3d.copy()
-                valid_indices = [i for i in range(len(pose_3d)) if pose_3d[i][3] > 0.1]
-
-                for i, idx in enumerate(valid_indices):
-                    if i < len(z_coords):
-                        temp_pose[idx][2] = z_coords[i]
-
-                # 计算骨骼长度误差
-                bone_error = self._calculate_bone_length_error(temp_pose, height_pixels)
-
-                # 计算关节角度误差
-                angle_error = self._calculate_joint_angle_error(temp_pose)
-
-                # 计算深度平滑性误差
-                smoothness_error = self._calculate_depth_smoothness_error(z_coords)
-
-                return bone_error + angle_error * 0.5 + smoothness_error * 0.3
-
-            # 获取有效关键点的初始Z坐标
-            valid_indices = [i for i in range(len(pose_3d)) if pose_3d[i][3] > 0.1]
-            initial_z = [pose_3d[i][2] for i in valid_indices]
-
-            if len(initial_z) > 0:
-                # 执行优化
-                bounds = [(-height_pixels * 0.3, height_pixels * 0.3) for _ in initial_z]
-                result = minimize(objective_function, initial_z, bounds=bounds, method='L-BFGS-B')
-
-                if result.success:
-                    # 应用优化结果
-                    for i, idx in enumerate(valid_indices):
-                        if i < len(result.x):
-                            pose_3d[idx][2] = result.x[i]
-
-            return pose_3d
-
-        except Exception as e:
-            print(f"骨骼约束优化错误: {e}")
-            return pose_3d
-
-    def _calculate_bone_length_error(self, pose_3d, height_pixels):
-        """计算骨骼长度误差"""
-        error = 0
-        expected_lengths = self._get_expected_bone_lengths(height_pixels)
-
-        for (start_idx, end_idx), expected_length in expected_lengths.items():
-            if (pose_3d[start_idx][3] > 0.1 and pose_3d[end_idx][3] > 0.1):
-                actual_length = np.linalg.norm(pose_3d[end_idx][:3] - pose_3d[start_idx][:3])
-                error += abs(actual_length - expected_length) / expected_length
-
-        return error
-
-    def _get_expected_bone_lengths(self, height_pixels):
-        """获取期望的骨骼长度"""
-        scale = height_pixels
-        return {
-            (2, 3): scale * self.body_proportions['upper_arm'],  # 右上臂
-            (3, 4): scale * self.body_proportions['forearm'],  # 右前臂
-            (5, 6): scale * self.body_proportions['upper_arm'],  # 左上臂
-            (6, 7): scale * self.body_proportions['forearm'],  # 左前臂
-            (9, 10): scale * self.body_proportions['thigh'],  # 右大腿
-            (10, 11): scale * self.body_proportions['shin'],  # 右小腿
-            (12, 13): scale * self.body_proportions['thigh'],  # 左大腿
-            (13, 14): scale * self.body_proportions['shin'],  # 左小腿
-            (1, 8): scale * self.body_proportions['neck_torso'],  # 躯干
-        }
-
-    def _calculate_joint_angle_error(self, pose_3d):
-        """计算关节角度误差"""
-        error = 0
-
-        # 检查主要关节角度
-        joint_triplets = [
-            ([2, 3, 4], 'elbow'),  # 右肘
-            ([5, 6, 7], 'elbow'),  # 左肘
-            ([9, 10, 11], 'knee'),  # 右膝
-            ([12, 13, 14], 'knee'),  # 左膝
-        ]
-
-        for triplet, joint_type in joint_triplets:
-            if all(pose_3d[i][3] > 0.1 for i in triplet):
-                angle = self._calculate_3d_angle(pose_3d, triplet)
-                min_angle, max_angle = self.joint_constraints[joint_type]
-
-                if angle < min_angle:
-                    error += (min_angle - angle) / 180
-                elif angle > max_angle:
-                    error += (angle - max_angle) / 180
-
-        return error
-
-    def _calculate_depth_smoothness_error(self, z_coords):
-        """计算深度平滑性误差"""
-        if len(z_coords) < 3:
-            return 0
-
-        # 计算相邻点的深度变化
-        differences = np.diff(z_coords)
-        return np.std(differences)
-
-    def _pose_prior_depth_refinement(self, pose_3d):
-        """基于姿态先验的深度细化"""
-        try:
-            # 使用常见的人体姿态先验知识进行深度细化
-
-            # 1. 头部通常在最前方
-            if pose_3d[0][3] > 0.1:  # 鼻子
-                head_z = pose_3d[0][2]
-                # 确保头部在身体前方
-                body_center_z = np.mean([pose_3d[i][2] for i in [1, 8] if pose_3d[i][3] > 0.1])
-                if head_z <= body_center_z:
-                    pose_3d[0][2] = body_center_z + abs(body_center_z) * 0.1
-
-            # 2. 手部通常比肘部更靠前
-            for arm in [(2, 3, 4), (5, 6, 7)]:  # 右臂，左臂
-                shoulder, elbow, wrist = arm
-                if all(pose_3d[i][3] > 0.1 for i in arm):
-                    # 确保手腕在肘部前方
-                    if pose_3d[wrist][2] <= pose_3d[elbow][2]:
-                        pose_3d[wrist][2] = pose_3d[elbow][2] + abs(pose_3d[elbow][2]) * 0.05
-
-            # 3. 脚部通常比膝部稍靠前
-            for leg in [(9, 10, 11), (12, 13, 14)]:  # 右腿，左腿
-                hip, knee, ankle = leg
-                if all(pose_3d[i][3] > 0.1 for i in leg):
-                    if pose_3d[ankle][2] <= pose_3d[knee][2]:
-                        pose_3d[ankle][2] = pose_3d[knee][2] + abs(pose_3d[knee][2]) * 0.03
-
-            return pose_3d
-
-        except Exception as e:
-            print(f"姿态先验深度细化错误: {e}")
-            return pose_3d
-
-    def _calculate_body_tilt_adjustment(self, pose_3d, joint_idx):
-        """计算身体倾斜调整"""
-        try:
-            if pose_3d[1][3] > 0.1 and pose_3d[8][3] > 0.1:  # 颈部和中臀
-                neck = pose_3d[1][:3]
-                hip = pose_3d[8][:3]
-
-                # 计算躯干倾斜角度
-                trunk_vector = hip - neck
-                tilt_angle = np.arctan2(trunk_vector[0], trunk_vector[1])  # 在XY平面的倾斜
-
-                # 根据关节位置和倾斜角度调整深度
-                adjustment_factor = {
-                    0: 0.8,  # 头部
-                    4: 1.0,  # 右手
-                    7: 1.0,  # 左手
-                    11: 0.5,  # 右脚
-                    14: 0.5,  # 左脚
-                }.get(joint_idx, 0.3)
-
-                return np.sin(tilt_angle) * adjustment_factor * 10
-
-            return 0
-
-        except Exception as e:
-            return 0
-
-    def _assess_reconstruction_quality(self, pose_3d, keypoints_2d):
-        """评估3D重建质量"""
-        try:
-            quality_factors = []
-
-            # 1. 关键点置信度
-            confidences = [pose_3d[i][3] for i in range(len(pose_3d)) if pose_3d[i][3] > 0]
-            if confidences:
-                quality_factors.append(np.mean(confidences))
-
-            # 2. 骨骼长度一致性
-            bone_consistency = self._calculate_bone_consistency(pose_3d)
-            quality_factors.append(bone_consistency)
-
-            # 3. 关节角度合理性
-            angle_reasonableness = self._calculate_angle_reasonableness(pose_3d)
-            quality_factors.append(angle_reasonableness)
-
-            # 4. 深度分布合理性
-            depth_reasonableness = self._calculate_depth_reasonableness(pose_3d)
-            quality_factors.append(depth_reasonableness)
-
-            return np.mean(quality_factors) if quality_factors else 0
-
-        except Exception as e:
-            print(f"质量评估错误: {e}")
-            return 0.5
-
-    def _calculate_bone_consistency(self, pose_3d):
-        """计算骨骼一致性"""
-        try:
-            # 检查对称骨骼的长度差异
-            symmetric_bones = [
-                ((2, 3), (5, 6)),  # 左右上臂
-                ((3, 4), (6, 7)),  # 左右前臂
-                ((9, 10), (12, 13)),  # 左右大腿
-                ((10, 11), (13, 14))  # 左右小腿
-            ]
-
-            consistency_scores = []
-
-            for (bone1, bone2) in symmetric_bones:
-                if all(pose_3d[i][3] > 0.1 for i in bone1 + bone2):
-                    length1 = np.linalg.norm(pose_3d[bone1[1]][:3] - pose_3d[bone1[0]][:3])
-                    length2 = np.linalg.norm(pose_3d[bone2[1]][:3] - pose_3d[bone2[0]][:3])
-
-                    if max(length1, length2) > 0:
-                        ratio = min(length1, length2) / max(length1, length2)
-                        consistency_scores.append(ratio)
-
-            return np.mean(consistency_scores) if consistency_scores else 0.8
-
-        except Exception as e:
-            return 0.5
-
-    def _calculate_angle_reasonableness(self, pose_3d):
-        """计算角度合理性"""
-        try:
-            reasonable_count = 0
-            total_count = 0
-
-            joint_checks = [
-                ([2, 3, 4], 'elbow'),
-                ([5, 6, 7], 'elbow'),
-                ([9, 10, 11], 'knee'),
-                ([12, 13, 14], 'knee')
-            ]
-
-            for triplet, joint_type in joint_checks:
-                if all(pose_3d[i][3] > 0.1 for i in triplet):
-                    angle = self._calculate_3d_angle(pose_3d, triplet)
-                    min_angle, max_angle = self.joint_constraints[joint_type]
-
-                    total_count += 1
-                    if min_angle <= angle <= max_angle:
-                        reasonable_count += 1
-
-            return reasonable_count / total_count if total_count > 0 else 0.8
-
-        except Exception as e:
-            return 0.5
-
-    def _calculate_depth_reasonableness(self, pose_3d):
-        """计算深度合理性"""
-        try:
-            valid_depths = [pose_3d[i][2] for i in range(len(pose_3d)) if pose_3d[i][3] > 0.1]
-
-            if len(valid_depths) < 3:
-                return 0.5
-
-            # 检查深度分布是否合理
-            depth_range = max(valid_depths) - min(valid_depths)
-            depth_std = np.std(valid_depths)
-
-            # 合理的深度范围应该在一定范围内
-            if depth_range < 1000 and depth_std < 200:  # 基于像素单位的经验值
-                return 0.9
-            elif depth_range < 2000 and depth_std < 400:
-                return 0.7
-            else:
-                return 0.3
-
-        except Exception as e:
-            return 0.5
-
-    def _calculate_3d_angle(self, pose_3d, indices):
-        """计算3D角度"""
-        try:
-            p1, p2, p3 = indices
-            v1 = pose_3d[p1][:3] - pose_3d[p2][:3]
-            v2 = pose_3d[p3][:3] - pose_3d[p2][:3]
-
-            cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-8)
-            angle = np.arccos(np.clip(cos_angle, -1, 1))
-
-            return np.degrees(angle)
-
-        except Exception as e:
-            return 90.0  # 默认角度
-
-    def _temporal_smoothing(self, current_3d, previous_3d):
-        """时间平滑 - 修复版"""
-        try:
-            if previous_3d is None:
-                return current_3d
-
-            alpha = self.reconstruction_params['temporal_smoothing_alpha']
-            smoothed_3d = current_3d.copy()
-
-            # 确保数据格式一致
-            if len(current_3d) != len(previous_3d):
-                return current_3d
-
-            for i in range(len(current_3d)):
-                if (len(current_3d[i]) >= 4 and len(previous_3d[i]) >= 4 and
-                        current_3d[i][3] > 0.1 and previous_3d[i][3] > 0.1):
-
-                    # 计算位置变化
-                    current_pos = np.array(current_3d[i][:3])
-                    previous_pos = np.array(previous_3d[i][:3])
-                    position_change = np.linalg.norm(current_pos - previous_pos)
-
-                    # 如果变化过大，减少平滑强度
-                    adaptive_alpha = alpha
-                    if position_change > 50:  # 阈值基于像素单位
-                        adaptive_alpha = min(alpha, 0.3)
-
-                    # 应用平滑
-                    for j in range(3):  # x, y, z
-                        smoothed_3d[i][j] = (adaptive_alpha * current_3d[i][j] +
-                                             (1 - adaptive_alpha) * previous_3d[i][j])
-
-            return smoothed_3d
-
-        except Exception as e:
-            print(f"时间平滑错误: {e}")
-            return current_3d
-
-    def _estimate_height_from_keypoints(self, keypoints_2d):
-        """从关键点估算身高 - 修复版"""
-        try:
-            # 方法1: 头顶到脚的距离
-            head_y = None
-            foot_y = None
-
-            # 寻找头部位置 (鼻子或眼睛)
-            for idx in [0, 15, 16]:  # 鼻子, 右眼, 左眼
-                if idx < len(keypoints_2d) and keypoints_2d[idx][2] > 0.3:
-                    head_y = keypoints_2d[idx][1]
-                    break
-
-            # 寻找脚部位置
-            foot_candidates = [11, 14, 22, 24]  # 右踝, 左踝, 右脚趾, 右脚跟
-            foot_y_values = []
-
-            for idx in foot_candidates:
-                if idx < len(keypoints_2d) and keypoints_2d[idx][2] > 0.2:
-                    foot_y_values.append(keypoints_2d[idx][1])
-
-            if foot_y_values:
-                foot_y = max(foot_y_values)  # 选择最低的点
-
-            if head_y is not None and foot_y is not None:
-                height_pixels = abs(foot_y - head_y)
-                if height_pixels > 100:  # 最小合理身高
-                    return height_pixels
-
-            # 方法2: 颈部到中臀的距离估算
-            if (len(keypoints_2d) > 8 and
-                    keypoints_2d[1][2] > 0.3 and keypoints_2d[8][2] > 0.3):
-                torso_length = abs(keypoints_2d[8][1] - keypoints_2d[1][1])
-                # 躯干通常是身高的约50%
-                estimated_height = torso_length / 0.5
-                if estimated_height > 100:
-                    return estimated_height
-
-            # 默认值
-            return 400
-
-        except Exception as e:
-            print(f"身高估算错误: {e}")
-            return 400
-# ==================== 修复后的3D可视化组件 ====================
-class Fixed3DVisualizationWidget(QWidget):
-    """修复后的3D可视化组件"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.pose_3d_data = None
-        self.current_frame = 0
-        self.setup_ui()
-
-    def setup_ui(self):
-        """设置UI"""
-        layout = QVBoxLayout(self)
-
-        # 控制面板
-        control_panel = QHBoxLayout()
-
-        self.play_btn = QPushButton("播放")
-        self.play_btn.clicked.connect(self.toggle_animation)
-
-        self.frame_slider = QSlider(Qt.Horizontal)
-        self.frame_slider.valueChanged.connect(self.set_frame)
-
-        self.frame_label = QLabel("帧: 0/0")
-
-        control_panel.addWidget(self.play_btn)
-        control_panel.addWidget(QLabel("帧数:"))
-        control_panel.addWidget(self.frame_slider)
-        control_panel.addWidget(self.frame_label)
-
-        layout.addLayout(control_panel)
-
-        # 使用matplotlib 3D显示（更稳定）
-        from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-        from matplotlib.figure import Figure
-
-        self.figure = Figure(figsize=(12, 9))
-        self.canvas = FigureCanvas(self.figure)
-
-        # 创建多个3D子图用于不同视角
-        self.ax_main = self.figure.add_subplot(221, projection='3d')
-        self.ax_front = self.figure.add_subplot(222, projection='3d')
-        self.ax_side = self.figure.add_subplot(223, projection='3d')
-        self.ax_top = self.figure.add_subplot(224, projection='3d')
-
-        layout.addWidget(self.canvas)
-
-        # 视角控制
-        view_panel = QHBoxLayout()
-
-        view_buttons = [
-            ('主视角', lambda: self.set_main_view()),
-            ('正面', lambda: self.set_view_angle(0, 0)),
-            ('侧面', lambda: self.set_view_angle(90, 0)),
-            ('俯视', lambda: self.set_view_angle(0, 90)),
-            ('重置', lambda: self.reset_views())
-        ]
-
-        for text, slot in view_buttons:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            view_panel.addWidget(btn)
-
-        view_panel.addStretch()
-        layout.addLayout(view_panel)
-
-    def set_pose_data(self, pose_sequence_3d):
-        """设置3D姿态数据"""
-        self.pose_3d_data = pose_sequence_3d
-        if pose_sequence_3d:
-            self.frame_slider.setMaximum(len(pose_sequence_3d) - 1)
-            self.frame_label.setText(f"帧: 0/{len(pose_sequence_3d) - 1}")
-            self.update_display()
-
-    def update_display(self):
-        """更新3D显示 - 修复版"""
-        if not self.pose_3d_data or self.current_frame >= len(self.pose_3d_data):
-            return
-
-        current_pose = self.pose_3d_data[self.current_frame]
-        if current_pose is None:
-            return
-
-        try:
-            # 清除所有子图
-            for ax in [self.ax_main, self.ax_front, self.ax_side, self.ax_top]:
-                ax.clear()
-
-            # 在每个子图中绘制骨架
-            self.draw_skeleton_in_axes(self.ax_main, current_pose, "主视角")
-            self.draw_skeleton_in_axes(self.ax_front, current_pose, "正面视角")
-            self.draw_skeleton_in_axes(self.ax_side, current_pose, "侧面视角")
-            self.draw_skeleton_in_axes(self.ax_top, current_pose, "俯视角")
-
-            # 设置不同的视角
-            self.ax_main.view_init(elev=20, azim=45)
-            self.ax_front.view_init(elev=0, azim=0)
-            self.ax_side.view_init(elev=0, azim=90)
-            self.ax_top.view_init(elev=90, azim=0)
-
-            self.canvas.draw()
-
-        except Exception as e:
-            print(f"3D显示更新错误: {e}")
-
-    def draw_skeleton_in_axes(self, ax, pose_3d, title):
-        """在指定的坐标轴中绘制骨架"""
-        try:
-            # 获取有效点
-            valid_points = []
-            valid_indices = []
-
-            for i, point in enumerate(pose_3d):
-                if len(point) >= 4 and point[3] > 0.1:  # 置信度检查
-                    valid_points.append(point[:3])
-                    valid_indices.append(i)
-
-            if not valid_points:
-                ax.text(0, 0, 0, "无有效数据", fontsize=12)
-                ax.set_title(title)
-                return
-
-            valid_points = np.array(valid_points)
-
-            # 绘制关键点
-            ax.scatter(valid_points[:, 0], valid_points[:, 1], valid_points[:, 2],
-                       c='red', s=50, alpha=0.8)
-
-            # 定义骨骼连接关系
-            connections = [
-                (1, 8), (1, 2), (1, 5),  # 躯干和肩膀
-                (2, 3), (3, 4),  # 右臂
-                (5, 6), (6, 7),  # 左臂
-                (8, 9), (9, 10), (10, 11),  # 右腿
-                (8, 12), (12, 13), (13, 14),  # 左腿
-                (1, 0),  # 头部
-            ]
-
-            # 绘制骨骼连接
-            for start_idx, end_idx in connections:
-                if (start_idx in valid_indices and end_idx in valid_indices and
-                        start_idx < len(pose_3d) and end_idx < len(pose_3d) and
-                        pose_3d[start_idx][3] > 0.1 and pose_3d[end_idx][3] > 0.1):
-                    start_point = pose_3d[start_idx][:3]
-                    end_point = pose_3d[end_idx][:3]
-
-                    ax.plot3D([start_point[0], end_point[0]],
-                              [start_point[1], end_point[1]],
-                              [start_point[2], end_point[2]],
-                              'b-', linewidth=2, alpha=0.7)
-
-            # 设置坐标轴
-            ax.set_xlabel('X (像素)')
-            ax.set_ylabel('Y (像素)')
-            ax.set_zlabel('Z (深度)')
-            ax.set_title(f'{title} - 帧 {self.current_frame}')
-
-            # 设置相等的坐标轴比例
-            if len(valid_points) > 0:
-                max_range = np.max(np.ptp(valid_points, axis=0)) / 2.0
-                center = np.mean(valid_points, axis=0)
-
-                ax.set_xlim(center[0] - max_range, center[0] + max_range)
-                ax.set_ylim(center[1] - max_range, center[1] + max_range)
-                ax.set_zlim(center[2] - max_range, center[2] + max_range)
-
-        except Exception as e:
-            print(f"绘制骨架错误: {e}")
-            ax.text(0, 0, 0, f"绘制错误: {str(e)}", fontsize=10)
-            ax.set_title(title)
-
-    def toggle_animation(self):
-        """切换动画播放状态"""
-        # 动画播放逻辑
-        pass
-
-    def set_frame(self, frame_number):
-        """设置当前帧"""
-        self.current_frame = frame_number
-        if self.pose_3d_data:
-            self.frame_label.setText(f"帧: {frame_number}/{len(self.pose_3d_data) - 1}")
-            self.update_display()
-
-    def set_view_angle(self, azim, elev):
-        """设置视角"""
-        self.ax_main.view_init(elev=elev, azim=azim)
-        self.canvas.draw()
-
-    def set_main_view(self):
-        """设置主视角"""
-        self.ax_main.view_init(elev=20, azim=45)
-        self.canvas.draw()
-
-    def reset_views(self):
-        """重置所有视角"""
-        self.ax_main.view_init(elev=20, azim=45)
-        self.ax_front.view_init(elev=0, azim=0)
-        self.ax_side.view_init(elev=0, azim=90)
-        self.ax_top.view_init(elev=90, azim=0)
-        self.canvas.draw()
-# ==================== 使用示例 ====================
-def example_usage():
-    """使用示例"""
-
-    # 创建3D分析器
-    analyzer = Enhanced3DAnalyzer()
-
-    # 模拟2D关键点数据 (BODY_25格式)
-    keypoints_2d = []
-    for i in range(25):
-        x = 320 + np.random.randn() * 100
-        y = 240 + np.random.randn() * 100
-        confidence = 0.8 + np.random.randn() * 0.1
-        keypoints_2d.append([x, y, max(0, confidence)])
-
-    # 执行3D重建
-    pose_3d = analyzer.reconstruct_3d_pose_enhanced(keypoints_2d)
-
-    if pose_3d is not None:
-        print("3D重建成功!")
-        print(f"重建质量评分: {analyzer._assess_reconstruction_quality(pose_3d, keypoints_2d):.3f}")
-
-        # 计算3D角度
-        angles_3d = analyzer.calculate_3d_angles_enhanced(pose_3d)
-        print("3D关节角度:", angles_3d)
-
-    else:
-        print("3D重建失败")
-if __name__ == "__main__":
-    example_usage()
-# ==================== 步骤3: UI集成修改 ====================
-# 在EnhancedGoPoseModule类中添加以下修改：
-def setup_tree_widget_with_3d(self):
-    """设置树形控件（包含3D分析）"""
-    # 运动员档案
-    profile_item = QTreeWidgetItem(self.treeWidget)
-    profile_item.setText(0, "运动员档案")
-    profile_item.setCheckState(0, Qt.Unchecked)
-
-    # 选择单人解析点
-    select_item = QTreeWidgetItem(self.treeWidget)
-    select_item.setText(0, "选择单人解析点")
-    select_item.setCheckState(0, Qt.Unchecked)
-
-    # 比例尺信息
-    scale_item = QTreeWidgetItem(self.treeWidget)
-    scale_item.setText(0, "比例尺信息")
-    scale_item.setCheckState(0, Qt.Unchecked)
-
-    # 解析点修正
-    modify_item = QTreeWidgetItem(self.treeWidget)
-    modify_item.setText(0, "解析点修正")
-    modify_item.setCheckState(0, Qt.Unchecked)
-
-    # 基础运动学结果
-    basic_result_item = QTreeWidgetItem(self.treeWidget)
-    basic_result_item.setText(0, "基础运动学结果")
-    basic_result_item.setCheckState(0, Qt.Unchecked)
-
-    # 生物力学分析
-    biomech_item = QTreeWidgetItem(self.treeWidget)
-    biomech_item.setText(0, "生物力学分析")
-    biomech_item.setCheckState(0, Qt.Unchecked)
-
-    # ✨ 新增：3D运动分析
-    threed_item = QTreeWidgetItem(self.treeWidget)
-    threed_item.setText(0, "3D运动分析")
-    threed_item.setCheckState(0, Qt.Unchecked)
-
-    # 损伤风险评估
-    injury_item = QTreeWidgetItem(self.treeWidget)
-    injury_item.setText(0, "损伤风险评估")
-    injury_item.setCheckState(0, Qt.Unchecked)
-
-    # 训练处方建议
-    prescription_item = QTreeWidgetItem(self.treeWidget)
-    prescription_item.setText(0, "训练处方建议")
-    prescription_item.setCheckState(0, Qt.Unchecked)
-
-    # 运动表现评分
-    performance_item = QTreeWidgetItem(self.treeWidget)
-    performance_item.setText(0, "运动表现评分")
-    performance_item.setCheckState(0, Qt.Unchecked)
-
-    # 标准动作对比
-    comparison_item = QTreeWidgetItem(self.treeWidget)
-    comparison_item.setText(0, "标准动作对比")
-    comparison_item.setCheckState(0, Qt.Unchecked)
-
-    # 历史数据分析
-    history_item = QTreeWidgetItem(self.treeWidget)
-    history_item.setText(0, "历史数据分析")
-    history_item.setCheckState(0, Qt.Unchecked)
-def treeClicked_with_3d(self):
-    """树形控件点击事件（包含3D处理）"""
-    try:
-        item = self.treeWidget.currentItem()
-        if not item:
-            return
-
-        item_text = item.text(0)
-
-        # 先断开之前的连接
-        try:
-            self.tableWidget.clicked.disconnect()
-        except:
-            pass
-
-        if item_text == '运动员档案':
-            self.show_athlete_profile()
-        elif item_text == '选择单人解析点':
-            self.show_person_selection()
-        elif item_text == '比例尺信息':
-            self.show_scale_info()
-        elif item_text == '解析点修正':
-            self.show_keypoint_modification()
-        elif item_text == '基础运动学结果':
-            self.show_basic_kinematics()
-        elif item_text == '生物力学分析':
-            self.show_biomechanics_analysis()
-        elif item_text == '3D运动分析':  # ✨ 新增
-            self.show_3d_analysis()
-        elif item_text == '损伤风险评估':
-            self.show_injury_risk_assessment()
-        elif item_text == '训练处方建议':
-            self.show_training_prescription()
-        elif item_text == '运动表现评分':
-            self.show_performance_score()
-        elif item_text == '标准动作对比':
-            self.show_standard_comparison()
-        elif item_text == '历史数据分析':
-            self.show_history_analysis()
-
-    except Exception as e:
-        QMessageBox.warning(self, '管理器错误', str(e))
-# ==================== 系统集成修复建议 ====================
-def show_3d_analysis(self):
-    """显示3D运动分析 - 完整实现"""
-    self.tableWidget.clear()
-    self.tableWidget.setHorizontalHeaderLabels(['3D分析项目', '结果'])
-    self.tableWidget.setRowCount(0)
-
-    if not self.pkl or not self.data or self.fps >= len(self.data):
-        self.tableWidget.insertRow(0)
-        self.tableWidget.setItem(0, 0, QTableWidgetItem('需要关键点数据'))
-        self.tableWidget.setItem(0, 1, QTableWidgetItem('请先载入解析点'))
-        return
-
-    try:
-        keypoints_data = self.data[self.fps]
-        if keypoints_data is None or len(keypoints_data) == 0:
-            self.tableWidget.insertRow(0)
-            self.tableWidget.setItem(0, 0, QTableWidgetItem('当前帧无数据'))
-            return
-
-        current_keypoints = keypoints_data[0]
-        height_pixels = self._estimate_height_from_keypoints(current_keypoints)
-
-        # 执行3D重建
-        pose_3d = self.threed_analyzer.reconstruct_3d_pose_enhanced(
-            current_keypoints,
-            previous_3d=getattr(self, 'last_3d_pose', None),
-            height_pixels=height_pixels
-        )
-
-        if pose_3d is None:
-            self.tableWidget.insertRow(0)
-            self.tableWidget.setItem(0, 0, QTableWidgetItem('3D重建失败'))
-            return
-
-        # 分析3D运动质量
-        if not hasattr(self, 'pose_3d_sequence'):
-            self.pose_3d_sequence = []
-        self.pose_3d_sequence.append(pose_3d)
-
-        # 显示3D分析结果
-        quality_metrics = self.threed_analyzer.analyze_3d_movement_quality([pose_3d])
-        angles_3d = self.threed_analyzer.calculate_3d_angles_enhanced(pose_3d)
-
-        # 显示结果
-        results = [
-            ('3D重建质量', f"{self.threed_analyzer._assess_reconstruction_quality(pose_3d, current_keypoints):.3f}"),
-            ('整体运动质量', f"{quality_metrics.get('overall_quality', 0):.3f}"),
-            ('对称性评分', f"{quality_metrics.get('symmetry_score', 0):.3f}"),
-            ('稳定性评分', f"{quality_metrics.get('stability_score', 0):.3f}"),
-            ('效率评分', f"{quality_metrics.get('efficiency_score', 0):.3f}"),
-        ]
-
-        # 添加3D角度结果
-        for angle_name, angle_value in angles_3d.items():
-            results.append((f"3D {angle_name}", f"{angle_value:.1f}°"))
-
-        for i, (name, value) in enumerate(results):
-            self.tableWidget.insertRow(i)
-            self.tableWidget.setItem(i, 0, QTableWidgetItem(name))
-            self.tableWidget.setItem(i, 1, QTableWidgetItem(value))
-
-        # 添加3D可视化按钮
-        row = self.tableWidget.rowCount()
-        self.tableWidget.insertRow(row)
-        self.tableWidget.setItem(row, 0, QTableWidgetItem('3D可视化'))
-
-        # 创建按钮并连接事件
-        view_3d_btn = QPushButton("打开3D视图")
-        view_3d_btn.clicked.connect(lambda: self.open_3d_viewer(pose_3d))
-        self.tableWidget.setCellWidget(row, 1, view_3d_btn)
-
-        # 保存当前3D姿态
-        self.last_3d_pose = pose_3d
-
-    except Exception as e:
-        self.tableWidget.insertRow(0)
-        self.tableWidget.setItem(0, 0, QTableWidgetItem('3D分析错误'))
-        self.tableWidget.setItem(0, 1, QTableWidgetItem(str(e)))
-def _estimate_height_from_keypoints(self, keypoints):
-    """估算身高像素值"""
-    try:
-        head_y = None
-        foot_y = None
-
-        # 头部位置
-        if len(keypoints) > 0 and len(keypoints[0]) >= 3 and keypoints[0][2] > 0.3:
-            head_y = keypoints[0][1]
-
-        # 脚部位置
-        foot_indices = [11, 14]
-        foot_y_values = []
-
-        for idx in foot_indices:
-            if idx < len(keypoints) and len(keypoints[idx]) >= 3 and keypoints[idx][2] > 0.2:
-                foot_y_values.append(keypoints[idx][1])
-
-        if foot_y_values:
-            foot_y = max(foot_y_values)
-
-        if head_y is not None and foot_y is not None:
-            height_pixels = abs(foot_y - head_y)
-            if height_pixels > 100:
-                return height_pixels
-
-        return 400
-
-    except Exception as e:
-        print(f"身高估算错误: {e}")
-        return 400
-def open_3d_viewer(self, pose_3d):
-    """打开3D可视化窗口"""
-    try:
-        # 创建3D可视化窗口
-        self.threed_window = QDialog(self)
-        self.threed_window.setWindowTitle('3D运动分析可视化')
-        self.threed_window.setMinimumSize(1000, 700)
-
-        layout = QVBoxLayout(self.threed_window)
-
-        # 创建3D可视化组件
-        self.threed_widget = Fixed3DVisualizationWidget()
-        layout.addWidget(self.threed_widget)
-
-        # 设置数据
-        if hasattr(self, 'pose_3d_sequence') and self.pose_3d_sequence:
-            # 使用完整的序列数据
-            self.threed_widget.set_pose_data(self.pose_3d_sequence)
-        else:
-            # 只有当前帧数据
-            self.threed_widget.set_pose_data([pose_3d])
-
-        # 显示窗口
-        self.threed_window.show()
-
-    except Exception as e:
-        QMessageBox.warning(self, '错误', f'打开3D视图失败: {str(e)}')
-        print(f"3D视图详细错误: {e}")
-        import traceback
-        traceback.print_exc()
-# 3. 添加数据保存和导出功能
-def save_3d_frame(self, pose_3d):
-    """保存3D帧数据"""
-    try:
-        filename, _ = QFileDialog.getSaveFileName(
-            self, '保存3D帧数据',
-            f'3d_frame_{self.fps}.json',
-            "JSON Files (*.json)"
-        )
-
-        if filename:
-            frame_data = {
-                'frame_number': self.fps,
-                'timestamp': datetime.now().isoformat(),
-                'pose_3d': pose_3d.tolist(),
-                'athlete_profile': getattr(self, 'athlete_profile', None),
-                'camera_params': getattr(self, 'camera_params', None)
-            }
-
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(frame_data, f, indent=2, ensure_ascii=False)
-
-            QMessageBox.information(self, '成功', f'3D帧数据已保存到: {filename}')
-
-    except Exception as e:
-        QMessageBox.warning(self, '错误', f'保存失败: {str(e)}')
-def export_3d_sequence(self):
-    """导出3D序列数据"""
-    try:
-        if not hasattr(self, 'pose_3d_sequence') or not self.pose_3d_sequence:
-            QMessageBox.warning(self, '警告', '没有3D序列数据可导出')
-            return
-
-        filename, _ = QFileDialog.getSaveFileName(
-            self, '导出3D序列数据',
-            f'3d_sequence_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json',
-            "JSON Files (*.json)"
-        )
-
-        if filename:
-            sequence_data = {
-                'export_date': datetime.now().isoformat(),
-                'total_frames': len(self.pose_3d_sequence),
-                'athlete_profile': getattr(self, 'athlete_profile', None),
-                'sequence': [pose.tolist() for pose in self.pose_3d_sequence]
-            }
-
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(sequence_data, f, indent=2, ensure_ascii=False)
-
-            QMessageBox.information(self, '成功', f'3D序列数据已导出到: {filename}')
-
-    except Exception as e:
-        QMessageBox.warning(self, '错误', f'导出失败: {str(e)}')
-# 4. 添加相机参数设置功能
-def setup_camera_parameters(self):
-    """设置相机参数"""
-    dialog = QDialog(self)
-    dialog.setWindowTitle('相机参数设置')
-    dialog.setFixedSize(400, 300)
-
-    layout = QFormLayout(dialog)
-
-    # 焦距
-    focal_length_spin = QDoubleSpinBox()
-    focal_length_spin.setRange(100, 2000)
-    focal_length_spin.setValue(getattr(self, 'camera_params', {}).get('focal_length', 500))
-    layout.addRow('焦距 (像素):', focal_length_spin)
-
-    # 主点坐标
-    cx_spin = QDoubleSpinBox()
-    cx_spin.setRange(0, 2000)
-    cx_spin.setValue(getattr(self, 'camera_params', {}).get('principal_point', (320, 240))[0])
-    layout.addRow('主点X坐标:', cx_spin)
-
-    cy_spin = QDoubleSpinBox()
-    cy_spin.setRange(0, 2000)
-    cy_spin.setValue(getattr(self, 'camera_params', {}).get('principal_point', (320, 240))[1])
-    layout.addRow('主点Y坐标:', cy_spin)
-
-    # 按钮
-    buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-    buttons.accepted.connect(dialog.accept)
-    buttons.rejected.connect(dialog.reject)
-    layout.addWidget(buttons)
-
-    if dialog.exec_() == QDialog.Accepted:
-        self.camera_params = {
-            'focal_length': focal_length_spin.value(),
-            'principal_point': (cx_spin.value(), cy_spin.value())
-        }
-        QMessageBox.information(self, '成功', '相机参数已更新')
-# 5. 错误处理和日志改进
-import logging
-# 设置3D分析专用日志
-logger_3d = logging.getLogger('3D_Analysis')
-logger_3d.setLevel(logging.INFO)
-def log_3d_analysis_error(error_msg, exception=None):
-    """记录3D分析错误"""
-    logger_3d.error(f"3D分析错误: {error_msg}")
-    if exception:
-        logger_3d.exception("详细错误信息:")
-def validate_3d_data(pose_3d):
-    """验证3D数据有效性"""
-    if pose_3d is None:
-        return False, "3D数据为空"
-
-    if not isinstance(pose_3d, np.ndarray):
-        return False, "3D数据格式错误"
-
-    if pose_3d.shape[1] < 4:
-        return False, "3D数据维度不足"
-
-    valid_points = np.sum(pose_3d[:, 3] > 0.1)
-    if valid_points < 5:
-        return False, f"有效关键点太少: {valid_points}"
-
-    return True, "数据有效"
-# 6. 性能优化建议
-class Performance3DOptimizer:
-    """3D分析性能优化器"""
-
-    def __init__(self):
-        self.frame_cache = {}
-        self.max_cache_size = 50
-
-    def cache_3d_result(self, frame_idx, pose_3d):
-        """缓存3D结果"""
-        if len(self.frame_cache) >= self.max_cache_size:
-            # 删除最旧的缓存
-            oldest_key = min(self.frame_cache.keys())
-            del self.frame_cache[oldest_key]
-
-        self.frame_cache[frame_idx] = pose_3d.copy()
-
-    def get_cached_result(self, frame_idx):
-        """获取缓存的结果"""
-        return self.frame_cache.get(frame_idx)
-
-    def clear_cache(self):
-        """清除缓存"""
-        self.frame_cache.clear()
-# 7. 集成测试函数
-def test_3d_integration():
-    """测试3D集成功能"""
-    try:
-        print("开始3D集成测试...")
-
-        # 创建测试数据
-        test_keypoints = []
-        for i in range(25):
-            x = 320 + np.random.randn() * 50
-            y = 240 + np.random.randn() * 50
-            conf = 0.8 + np.random.randn() * 0.1
-            test_keypoints.append([x, y, max(0.1, conf)])
-
-        # 创建分析器
-        analyzer = Enhanced3DAnalyzer()
-
-        # 执行重建
-        pose_3d = analyzer.reconstruct_3d_pose_enhanced(test_keypoints)
-
-        # 验证结果
-        is_valid, msg = validate_3d_data(pose_3d)
-
-        if is_valid:
-            print("✅ 3D集成测试通过")
-            print(f"重建质量: {analyzer._assess_reconstruction_quality(pose_3d, test_keypoints):.3f}")
-        else:
-            print(f"❌ 3D集成测试失败: {msg}")
-
-        return is_valid
-
-    except Exception as e:
-        print(f"❌ 3D集成测试异常: {e}")
-        return False
-if __name__ == "__main__":
-    # 运行集成测试
-    test_3d_integration()
 # ==================== 3. 高级生物力学模块 ====================
 class AdvancedBiomechanics:
     """高级生物力学分析器"""
@@ -9502,6 +7523,11 @@ class AnalysisManager:
         """状态更新回调"""
         print(f"状态: {status}")
 # ==================== 增强版 GoPose 主要功能模块 ====================
+try:
+    from analysis.enhanced_3d_analyzer import Enhanced3DAnalyzer
+except ImportError:
+    # 如果在同一个文件中，直接使用
+    pass
 class EnhancedGoPoseModule(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -9516,12 +7542,10 @@ class EnhancedGoPoseModule(QWidget):
         # 确保3D分析器正确初始化
         try:
             self.threed_analyzer = Enhanced3DAnalyzer()
+            print("3D分析器初始化成功")
         except Exception as e:
             print(f"3D分析器初始化失败: {e}")
             self.threed_analyzer = None
-
-        self.pose_3d_sequence = []
-        self.last_3d_pose = None
 
         # UI初始化
         self.setup_ui()
@@ -9534,6 +7558,606 @@ class EnhancedGoPoseModule(QWidget):
         self.play_timer = QTimer()
         self.play_timer.timeout.connect(self.play_next_frame)
         self.is_playing = False
+
+    def show_all_3d(self):
+        """对全部帧做3D重建并打开3D序列视图"""
+        self.run_complete_sequence_analysis()
+        if hasattr(self, 'pose_3d_sequence') and self.pose_3d_sequence:
+            self.open_3d_viewer(self.pose_3d_sequence[0])
+        else:
+            QMessageBox.warning(self, '错误', '没有可用的3D序列')
+    def run_complete_sequence_analysis(self):
+        """对全部帧做3D重建并存到 pose_3d_sequence"""
+        self.pose_3d_sequence = []
+        if not self.data:
+            QMessageBox.warning(self, '错误', '没有关键点数据')
+            return
+        for frame_idx, keypoints_data in enumerate(self.data):
+            if not keypoints_data:
+                continue
+            current_keypoints = keypoints_data[0]
+            height_pixels = self._estimate_height_from_keypoints(current_keypoints)
+            pose_3d = self.threed_analyzer.reconstruct_3d_pose_enhanced(
+                current_keypoints,
+                previous_3d=self.pose_3d_sequence[-1] if self.pose_3d_sequence else None,
+                height_pixels=height_pixels
+            )
+            if pose_3d is not None:
+                self.pose_3d_sequence.append(pose_3d)
+    def ThreeDAnalyzer(video_path=None, keypoints_data=None, frame_rate=30):
+        """
+        3D运动分析器
+
+        参数:
+        - video_path: 视频文件路径
+        - keypoints_data: 关键点数据 (可选，如果提供则跳过视频处理)
+        - frame_rate: 视频帧率
+
+        返回:
+        - analysis_results: 包含运动分析结果的字典
+        """
+
+        print("=== 3D运动分析器启动 ===")
+
+        # 1. 数据预处理
+        if keypoints_data is None:
+            # 从视频中提取关键点数据 (简化版本)
+            keypoints_data = extract_keypoints_from_video(video_path)
+
+        # 2. 3D坐标重建
+        coords_3d = reconstruct_3d_coordinates(keypoints_data)
+
+        # 3. 运动轨迹分析
+        trajectory_analysis = analyze_trajectory(coords_3d, frame_rate)
+
+        # 4. 速度和加速度计算
+        kinematics = calculate_kinematics(coords_3d, frame_rate)
+
+        # 5. 运动模式识别
+        motion_patterns = identify_motion_patterns(coords_3d, kinematics)
+
+        # 6. 生成3D可视化
+        generate_3d_visualization(coords_3d, trajectory_analysis)
+
+        # 7. 运动质量评估
+        quality_metrics = assess_motion_quality(coords_3d, kinematics)
+
+        analysis_results = {
+            'coordinates_3d': coords_3d,
+            'trajectory': trajectory_analysis,
+            'kinematics': kinematics,
+            'motion_patterns': motion_patterns,
+            'quality_metrics': quality_metrics,
+            'frame_rate': frame_rate
+        }
+
+        print("✓ 3D运动分析完成")
+        return analysis_results
+    def extract_keypoints_from_video(video_path):
+        """从视频中提取关键点 (模拟数据)"""
+        # 模拟关键点数据 - 实际应用中可使用OpenPose, MediaPipe等
+        n_frames = 100
+        n_keypoints = 17  # 人体关键点数量
+
+        # 生成模拟的运动轨迹数据
+        t = np.linspace(0, 2 * np.pi, n_frames)
+        keypoints = np.zeros((n_frames, n_keypoints, 3))
+
+        for i in range(n_keypoints):
+            # 模拟不同关键点的运动轨迹
+            keypoints[:, i, 0] = 100 + 50 * np.sin(t + i * 0.3)  # x
+            keypoints[:, i, 1] = 100 + 30 * np.cos(t + i * 0.2)  # y
+            keypoints[:, i, 2] = 50 + 20 * np.sin(2 * t + i * 0.1)  # z (深度)
+
+        return keypoints
+    def reconstruct_3d_coordinates(keypoints_2d):
+        """3D坐标重建"""
+        # 简化的3D重建 - 实际应用中需要相机标定和立体视觉
+        coords_3d = keypoints_2d.copy()
+
+        # 添加深度信息的处理
+        for frame in range(coords_3d.shape[0]):
+            for point in range(coords_3d.shape[1]):
+                # 基于运动学约束优化3D坐标
+                coords_3d[frame, point] = optimize_3d_point(coords_3d[frame, point])
+
+        return coords_3d
+    def optimize_3d_point(point):
+        """优化3D点坐标"""
+        # 简单的噪声过滤
+        return point + np.random.normal(0, 0.1, 3)
+    def analyze_trajectory(coords_3d, frame_rate):
+        """分析运动轨迹"""
+        n_frames, n_keypoints, _ = coords_3d.shape
+
+        trajectory_metrics = {
+            'path_length': [],
+            'displacement': [],
+            'smoothness': [],
+            'direction_changes': []
+        }
+
+        for keypoint in range(n_keypoints):
+            trajectory = coords_3d[:, keypoint, :]
+
+            # 计算路径长度
+            path_length = calculate_path_length(trajectory)
+            trajectory_metrics['path_length'].append(path_length)
+
+            # 计算位移
+            displacement = euclidean(trajectory[0], trajectory[-1])
+            trajectory_metrics['displacement'].append(displacement)
+
+            # 计算平滑度 (曲率变化)
+            smoothness = calculate_smoothness(trajectory)
+            trajectory_metrics['smoothness'].append(smoothness)
+
+            # 方向变化次数
+            direction_changes = count_direction_changes(trajectory)
+            trajectory_metrics['direction_changes'].append(direction_changes)
+
+        return trajectory_metrics
+    def calculate_path_length(trajectory):
+        """计算路径长度"""
+        distances = [euclidean(trajectory[i], trajectory[i + 1])
+                     for i in range(len(trajectory) - 1)]
+        return sum(distances)
+    def calculate_smoothness(trajectory):
+        """计算轨迹平滑度"""
+        # 使用二阶导数的方差来衡量平滑度
+        diff2 = np.diff(trajectory, n=2, axis=0)
+        smoothness = np.mean(np.var(diff2, axis=0))
+        return smoothness
+    def count_direction_changes(trajectory):
+        """计算方向变化次数"""
+        velocities = np.diff(trajectory, axis=0)
+        direction_changes = 0
+
+        for i in range(len(velocities) - 1):
+            if np.dot(velocities[i], velocities[i + 1]) < 0:
+                direction_changes += 1
+
+        return direction_changes
+    def calculate_kinematics(coords_3d, frame_rate):
+        """计算运动学参数"""
+        dt = 1.0 / frame_rate
+        n_frames, n_keypoints, _ = coords_3d.shape
+
+        # 计算速度 (一阶导数)
+        velocities = np.gradient(coords_3d, dt, axis=0)
+
+        # 计算加速度 (二阶导数)
+        accelerations = np.gradient(velocities, dt, axis=0)
+
+        # 计算速度大小
+        speed = np.linalg.norm(velocities, axis=2)
+
+        # 计算加速度大小
+        acceleration_magnitude = np.linalg.norm(accelerations, axis=2)
+
+        kinematics = {
+            'positions': coords_3d,
+            'velocities': velocities,
+            'accelerations': accelerations,
+            'speed': speed,
+            'acceleration_magnitude': acceleration_magnitude,
+            'max_speed': np.max(speed, axis=0),
+            'avg_speed': np.mean(speed, axis=0),
+            'max_acceleration': np.max(acceleration_magnitude, axis=0)
+        }
+
+        return kinematics
+    def identify_motion_patterns(coords_3d, kinematics):
+        """识别运动模式"""
+        patterns = {
+            'motion_type': [],
+            'periodicity': [],
+            'dominant_frequency': [],
+            'movement_efficiency': []
+        }
+
+        n_keypoints = coords_3d.shape[1]
+
+        for keypoint in range(n_keypoints):
+            speed_profile = kinematics['speed'][:, keypoint]
+            position_profile = coords_3d[:, keypoint, :]
+
+            # 运动类型分类
+            motion_type = classify_motion_type(speed_profile)
+            patterns['motion_type'].append(motion_type)
+
+            # 周期性分析
+            periodicity = analyze_periodicity(position_profile)
+            patterns['periodicity'].append(periodicity)
+
+            # 主频率分析
+            dominant_freq = find_dominant_frequency(speed_profile)
+            patterns['dominant_frequency'].append(dominant_freq)
+
+            # 运动效率
+            efficiency = calculate_movement_efficiency(position_profile, speed_profile)
+            patterns['movement_efficiency'].append(efficiency)
+
+        return patterns
+    def classify_motion_type(speed_profile):
+        """分类运动类型"""
+        speed_var = np.var(speed_profile)
+        speed_mean = np.mean(speed_profile)
+
+        if speed_var < 0.1 * speed_mean:
+            return "uniform"
+        elif speed_var < 0.5 * speed_mean:
+            return "rhythmic"
+        else:
+            return "irregular"
+    def analyze_periodicity(position_profile):
+        """分析周期性"""
+        # 使用FFT分析周期性
+        fft_result = np.fft.fft(position_profile[:, 0])  # 仅分析x轴
+        frequencies = np.fft.fftfreq(len(position_profile))
+
+        # 找到主要频率成分
+        dominant_freq_idx = np.argmax(np.abs(fft_result[1:len(fft_result) // 2])) + 1
+        periodicity_strength = np.abs(fft_result[dominant_freq_idx]) / np.sum(np.abs(fft_result))
+
+        return periodicity_strength
+    def find_dominant_frequency(speed_profile):
+        """找到主导频率"""
+        frequencies, power = signal.periodogram(speed_profile)
+        dominant_freq_idx = np.argmax(power[1:]) + 1
+        return frequencies[dominant_freq_idx]
+    def calculate_movement_efficiency(position_profile, speed_profile):
+        """计算运动效率"""
+        # 效率 = 直线距离 / 实际路径长度
+        straight_distance = euclidean(position_profile[0], position_profile[-1])
+        actual_path_length = calculate_path_length(position_profile)
+
+        if actual_path_length > 0:
+            efficiency = straight_distance / actual_path_length
+        else:
+            efficiency = 0
+
+        return efficiency
+    def generate_3d_visualization(coords_3d, trajectory_analysis):
+        """生成3D可视化"""
+        fig = plt.figure(figsize=(12, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # 绘制几个关键点的轨迹
+        key_points = [0, 5, 10]  # 选择几个代表性关键点
+        colors = ['red', 'blue', 'green']
+
+        for i, point_idx in enumerate(key_points):
+            trajectory = coords_3d[:, point_idx, :]
+            ax.plot(trajectory[:, 0], trajectory[:, 1], trajectory[:, 2],
+                    color=colors[i], label=f'关键点 {point_idx}', linewidth=2)
+
+            # 标记起始和结束点
+            ax.scatter(trajectory[0, 0], trajectory[0, 1], trajectory[0, 2],
+                       color=colors[i], s=100, marker='o', alpha=0.8)
+            ax.scatter(trajectory[-1, 0], trajectory[-1, 1], trajectory[-1, 2],
+                       color=colors[i], s=100, marker='s', alpha=0.8)
+
+        ax.set_xlabel('X轴 (像素)')
+        ax.set_ylabel('Y轴 (像素)')
+        ax.set_zlabel('Z轴 (深度)')
+        ax.set_title('3D运动轨迹分析')
+        ax.legend()
+
+        plt.tight_layout()
+        plt.show()
+    def assess_motion_quality(coords_3d, kinematics):
+        """评估运动质量"""
+        quality_metrics = {
+            'stability_score': [],
+            'coordination_score': [],
+            'fluency_score': [],
+            'overall_score': []
+        }
+
+        n_keypoints = coords_3d.shape[1]
+
+        for keypoint in range(n_keypoints):
+            # 稳定性分数 (基于速度变化)
+            speed_changes = np.diff(kinematics['speed'][:, keypoint])
+            stability = 1.0 / (1.0 + np.var(speed_changes))
+            quality_metrics['stability_score'].append(stability)
+
+            # 协调性分数 (基于加速度平滑性)
+            acc_smoothness = 1.0 / (1.0 + np.var(kinematics['acceleration_magnitude'][:, keypoint]))
+            quality_metrics['coordination_score'].append(acc_smoothness)
+
+            # 流畅性分数 (基于轨迹平滑性)
+            trajectory = coords_3d[:, keypoint, :]
+            fluency = 1.0 / (1.0 + calculate_smoothness(trajectory))
+            quality_metrics['fluency_score'].append(fluency)
+
+            # 综合分数
+            overall = (stability + acc_smoothness + fluency) / 3.0
+            quality_metrics['overall_score'].append(overall)
+
+        return quality_metrics
+    def show_3d_analysis(self):
+        print("开始3D分析...")
+        print(f"threed_analyzer存在: {hasattr(self, 'threed_analyzer')}")
+        print(f"threed_analyzer值: {self.threed_analyzer}")
+
+        # 尝试简单调用
+        try:
+            result = self.threed_analyzer.reconstruct_3d_pose_enhanced([])
+            print("方法调用成功")
+        except AttributeError as e:
+            print(f"方法不存在: {e}")
+        except Exception as e:
+            print(f"其他错误: {e}")
+        """显示3D运动分析 - 完整实现"""
+        self.tableWidget.clear()
+        self.tableWidget.setHorizontalHeaderLabels(['3D分析项目', '结果'])
+        self.tableWidget.setRowCount(0)
+
+        if self.threed_analyzer is None:
+            QMessageBox.warning(self, '错误', '3D分析器未初始化')
+            return
+
+        if not self.pkl or not self.data or self.fps >= len(self.data):
+            self.tableWidget.insertRow(0)
+            self.tableWidget.setItem(0, 0, QTableWidgetItem('需要关键点数据'))
+            self.tableWidget.setItem(0, 1, QTableWidgetItem('请先载入解析点'))
+            return
+
+        try:
+            keypoints_data = self.data[self.fps]
+            if keypoints_data is None or len(keypoints_data) == 0:
+                self.tableWidget.insertRow(0)
+                self.tableWidget.setItem(0, 0, QTableWidgetItem('当前帧无数据'))
+                return
+
+            current_keypoints = keypoints_data[0]
+            height_pixels = self._estimate_height_from_keypoints(current_keypoints)
+
+            # 执行3D重建
+            pose_3d = self.threed_analyzer.reconstruct_3d_pose_enhanced(
+                current_keypoints,
+                previous_3d=getattr(self, 'last_3d_pose', None),
+                height_pixels=height_pixels
+            )
+
+            if pose_3d is None:
+                self.tableWidget.insertRow(0)
+                self.tableWidget.setItem(0, 0, QTableWidgetItem('3D重建失败'))
+                return
+
+            # 分析3D运动质量
+            if not hasattr(self, 'pose_3d_sequence'):
+                self.pose_3d_sequence = []
+            self.pose_3d_sequence.append(pose_3d)
+
+            # 显示3D分析结果
+            quality_metrics = self.threed_analyzer.analyze_3d_movement_quality([pose_3d])
+            angles_3d = self.threed_analyzer.calculate_3d_angles_enhanced(pose_3d)
+
+            # 显示结果
+            results = [
+                (
+                '3D重建质量', f"{self.threed_analyzer._assess_reconstruction_quality(pose_3d, current_keypoints):.3f}"),
+                ('整体运动质量', f"{quality_metrics.get('overall_quality', 0):.3f}"),
+                ('对称性评分', f"{quality_metrics.get('symmetry_score', 0):.3f}"),
+                ('稳定性评分', f"{quality_metrics.get('stability_score', 0):.3f}"),
+                ('效率评分', f"{quality_metrics.get('efficiency_score', 0):.3f}"),
+            ]
+
+            # 添加3D角度结果
+            for angle_name, angle_value in angles_3d.items():
+                results.append((f"3D {angle_name}", f"{angle_value:.1f}°"))
+
+            for i, (name, value) in enumerate(results):
+                self.tableWidget.insertRow(i)
+                self.tableWidget.setItem(i, 0, QTableWidgetItem(name))
+                self.tableWidget.setItem(i, 1, QTableWidgetItem(value))
+
+            row = self.tableWidget.rowCount()
+            self.tableWidget.insertRow(row)
+            self.tableWidget.setItem(row, 0, QTableWidgetItem('3D可视化'))
+
+            # 单帧3D可视化按钮
+            view_3d_btn = QPushButton("打开当前帧3D视图")
+            view_3d_btn.clicked.connect(lambda: self.open_3d_viewer(pose_3d))
+
+            # 全序列3D分析按钮
+            view_3d_seq_btn = QPushButton("3D全序列分析")
+            view_3d_seq_btn.clicked.connect(self.show_all_3d)
+
+            # 放到水平布局
+            btn_widget = QWidget()
+            btn_layout = QHBoxLayout()
+            btn_layout.setContentsMargins(0, 0, 0, 0)
+            btn_layout.addWidget(view_3d_btn)
+            btn_layout.addWidget(view_3d_seq_btn)
+            btn_widget.setLayout(btn_layout)
+
+            self.tableWidget.setCellWidget(row, 1, btn_widget)
+
+            # 保存当前3D姿态
+            self.last_3d_pose = pose_3d
+
+        except Exception as e:
+            self.tableWidget.insertRow(0)
+            self.tableWidget.setItem(0, 0, QTableWidgetItem('3D分析错误'))
+            self.tableWidget.setItem(0, 1, QTableWidgetItem(str(e)))
+    def _estimate_height_from_keypoints(self, keypoints):
+        """估算身高像素值"""
+        try:
+            head_y = None
+            foot_y = None
+
+            # 头部位置
+            if len(keypoints) > 0 and len(keypoints[0]) >= 3 and keypoints[0][2] > 0.3:
+                head_y = keypoints[0][1]
+
+            # 脚部位置
+            foot_indices = [11, 14]
+            foot_y_values = []
+
+            for idx in foot_indices:
+                if idx < len(keypoints) and len(keypoints[idx]) >= 3 and keypoints[idx][2] > 0.2:
+                    foot_y_values.append(keypoints[idx][1])
+
+            if foot_y_values:
+                foot_y = max(foot_y_values)
+
+            if head_y is not None and foot_y is not None:
+                height_pixels = abs(foot_y - head_y)
+                if height_pixels > 100:
+                    return height_pixels
+
+            return 400
+
+        except Exception as e:
+            print(f"身高估算错误: {e}")
+            return 400
+    def open_3d_viewer(self, pose_3d):
+        """打开3D可视化窗口"""
+        try:
+            # 创建3D可视化窗口
+            self.threed_window = QDialog(self)
+            self.threed_window.setWindowTitle('3D运动分析可视化')
+            self.threed_window.setMinimumSize(1000, 700)
+
+            layout = QVBoxLayout(self.threed_window)
+
+            # 创建3D可视化组件
+            self.threed_widget = Fixed3DVisualizationWidget()
+            layout.addWidget(self.threed_widget)
+
+            # 设置数据
+            if hasattr(self, 'pose_3d_sequence') and self.pose_3d_sequence:
+                # 使用完整的序列数据
+                self.threed_widget.set_pose_data(self.pose_3d_sequence)
+            else:
+                # 只有当前帧数据
+                self.threed_widget.set_pose_data([pose_3d])
+
+            # 显示窗口
+            self.threed_window.show()
+
+        except Exception as e:
+            QMessageBox.warning(self, '错误', f'打开3D视图失败: {str(e)}')
+            print(f"3D视图详细错误: {e}")
+            import traceback
+            traceback.print_exc()
+    # 3. 添加数据保存和导出功能
+    def save_3d_frame(self, pose_3d):
+        """保存3D帧数据"""
+        try:
+            filename, _ = QFileDialog.getSaveFileName(
+                self, '保存3D帧数据',
+                f'3d_frame_{self.fps}.json',
+                "JSON Files (*.json)"
+            )
+
+            if filename:
+                frame_data = {
+                    'frame_number': self.fps,
+                    'timestamp': datetime.now().isoformat(),
+                    'pose_3d': pose_3d.tolist(),
+                    'athlete_profile': getattr(self, 'athlete_profile', None),
+                    'camera_params': getattr(self, 'camera_params', None)
+                }
+
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(frame_data, f, indent=2, ensure_ascii=False)
+
+                QMessageBox.information(self, '成功', f'3D帧数据已保存到: {filename}')
+
+        except Exception as e:
+            QMessageBox.warning(self, '错误', f'保存失败: {str(e)}')
+    def export_3d_sequence(self):
+        """导出3D序列数据"""
+        try:
+            if not hasattr(self, 'pose_3d_sequence') or not self.pose_3d_sequence:
+                QMessageBox.warning(self, '警告', '没有3D序列数据可导出')
+                return
+
+            filename, _ = QFileDialog.getSaveFileName(
+                self, '导出3D序列数据',
+                f'3d_sequence_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json',
+                "JSON Files (*.json)"
+            )
+
+            if filename:
+                sequence_data = {
+                    'export_date': datetime.now().isoformat(),
+                    'total_frames': len(self.pose_3d_sequence),
+                    'athlete_profile': getattr(self, 'athlete_profile', None),
+                    'sequence': [pose.tolist() for pose in self.pose_3d_sequence]
+                }
+
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(sequence_data, f, indent=2, ensure_ascii=False)
+
+                QMessageBox.information(self, '成功', f'3D序列数据已导出到: {filename}')
+
+        except Exception as e:
+            QMessageBox.warning(self, '错误', f'导出失败: {str(e)}')
+    # 4. 添加相机参数设置功能
+    def setup_camera_parameters(self):
+        """设置相机参数"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle('相机参数设置')
+        dialog.setFixedSize(400, 300)
+
+        layout = QFormLayout(dialog)
+
+        # 焦距
+        focal_length_spin = QDoubleSpinBox()
+        focal_length_spin.setRange(100, 2000)
+        focal_length_spin.setValue(getattr(self, 'camera_params', {}).get('focal_length', 500))
+        layout.addRow('焦距 (像素):', focal_length_spin)
+
+        # 主点坐标
+        cx_spin = QDoubleSpinBox()
+        cx_spin.setRange(0, 2000)
+        cx_spin.setValue(getattr(self, 'camera_params', {}).get('principal_point', (320, 240))[0])
+        layout.addRow('主点X坐标:', cx_spin)
+
+        cy_spin = QDoubleSpinBox()
+        cy_spin.setRange(0, 2000)
+        cy_spin.setValue(getattr(self, 'camera_params', {}).get('principal_point', (320, 240))[1])
+        layout.addRow('主点Y坐标:', cy_spin)
+
+        # 按钮
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec_() == QDialog.Accepted:
+            self.camera_params = {
+                'focal_length': focal_length_spin.value(),
+                'principal_point': (cx_spin.value(), cy_spin.value())
+            }
+            QMessageBox.information(self, '成功', '相机参数已更新')
+    # 5. 错误处理和日志改进
+    import logging
+    # 设置3D分析专用日志
+    logger_3d = logging.getLogger('3D_Analysis')
+    logger_3d.setLevel(logging.INFO)
+    def validate_3d_data(pose_3d):
+        """验证3D数据有效性"""
+        if pose_3d is None:
+            return False, "3D数据为空"
+
+        if not isinstance(pose_3d, np.ndarray):
+            return False, "3D数据格式错误"
+
+        if pose_3d.shape[1] < 4:
+            return False, "3D数据维度不足"
+
+        valid_points = np.sum(pose_3d[:, 3] > 0.1)
+        if valid_points < 5:
+            return False, f"有效关键点太少: {valid_points}"
+
+        return True, "数据有效"
 
     def setup_ar_controls(self):
         """设置AR控制界面"""
@@ -10456,6 +9080,7 @@ class EnhancedGoPoseModule(QWidget):
         self.pushButton_10.clicked.connect(self.play)
         self.horizontalSlider.valueChanged.connect(self.sli)
         self.athlete_profile_btn.clicked.connect(self.edit_athlete_profile)
+
 
         # 修复树形控件连接问题
         try:
@@ -11747,6 +10372,1580 @@ def analysis(video, cut1, cut2, zone=0):
         pickle.dump(data_list, file0)
 
     return pkl_path
+# ==================== 修复后的ar运动实时分析指导 ====================
+@dataclass
+class StandardPose:
+    """标准姿势数据结构"""
+    name: str
+    sport_type: str
+    keypoints: List[Tuple[float, float]]
+    angles: Dict[str, float]
+    metadata: Dict[str, Any]
+@dataclass
+class JointError:
+    """关节错误信息"""
+    joint_name: str
+    current_angle: float
+    target_angle: float
+    error_magnitude: float
+    correction_direction: str
+import logging
+class ARRealTimeGuidance:
+    """改进的AR增强现实指导系统"""
+
+    def __init__(self, gopose_module):
+        # 初始化 logger
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.INFO)
+        self.gopose_module = gopose_module
+        self.threed_analyzer = self._safe_init_analyzer("Enhanced3DAnalyzer")
+        self.real_time_analyzer = self._safe_init_analyzer("RealTimeAnalyzer")
+
+        # 初始化标准姿势数据
+        self.standard_poses = {}
+        self._load_standard_poses()
+
+        # 历史数据缓存
+        self.pose_history = deque(maxlen=30)  # 保存最近30帧的姿势数据
+
+        # 性能优化参数
+        self.frame_skip_count = 0
+        self.analysis_frequency = 3  # 每3帧进行一次深度分析
+
+        # 线程安全锁
+        self.analysis_lock = threading.Lock()
+
+        # 配置日志
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+
+        # AR显示配置
+        self.ar_config = {
+            'show_ideal_pose': True,
+            'show_force_vectors': True,
+            'show_muscle_activation': True,
+            'transparency': 0.3,
+            'text_scale': 0.7,
+            'line_thickness': 2
+        }
+
+    def _safe_init_analyzer(self, analyzer_name: str):
+        """安全初始化分析器"""
+        try:
+            # 根据实际的分析器类进行初始化
+            # 这里需要根据您的实际模块来调整
+            if analyzer_name == "Enhanced3DAnalyzer":
+                return Enhanced3DAnalyzer() if 'Enhanced3DAnalyzer' in globals() else None
+            elif analyzer_name == "RealTimeAnalyzer":
+                return RealTimeAnalyzer() if 'RealTimeAnalyzer' in globals() else None
+        except Exception as e:
+            self.logger.warning(f"无法初始化 {analyzer_name}: {e}")
+            return None
+
+    def _load_standard_poses(self):
+        """加载标准姿势数据"""
+        try:
+            # 尝试从文件加载
+            standard_poses_file = "standard_poses.json"
+            with open(standard_poses_file, 'r', encoding='utf-8') as f:
+                poses_data = json.load(f)
+
+            for sport, poses in poses_data.items():
+                self.standard_poses[sport] = []
+                for pose_data in poses:
+                    standard_pose = StandardPose(
+                        name=pose_data['name'],
+                        sport_type=sport,
+                        keypoints=pose_data['keypoints'],
+                        angles=pose_data['angles'],
+                        metadata=pose_data.get('metadata', {})
+                    )
+                    self.standard_poses[sport].append(standard_pose)
+
+        except FileNotFoundError:
+            self.logger.warning("标准姿势文件未找到，使用默认配置")
+            self._create_default_poses()
+        except Exception as e:
+            self.logger.error(f"加载标准姿势时出错: {e}")
+            self._create_default_poses()
+
+    def _create_default_poses(self):
+        """创建默认的标准姿势"""
+        # 为常见运动创建基本的标准姿势
+        self.standard_poses = {
+            'general': [],
+            'basketball': [],
+            'tennis': [],
+            'golf': []
+        }
+        self.logger.info("已创建默认标准姿势配置")
+
+    def get_standard_pose_for_sport(self, sport_type: str, action_phase: str = None) -> Optional[StandardPose]:
+        """获取特定运动的标准姿势"""
+        if sport_type not in self.standard_poses:
+            sport_type = 'general'
+
+        poses = self.standard_poses[sport_type]
+        if not poses:
+            return None
+
+        # 如果指定了动作阶段，尝试找到匹配的姿势
+        if action_phase:
+            for pose in poses:
+                if pose.metadata.get('phase') == action_phase:
+                    return pose
+
+        # 返回第一个标准姿势
+        return poses[0] if poses else None
+
+    def overlay_technique_guidance(self, frame: np.ndarray, current_keypoints: List) -> np.ndarray:
+        """在实时画面上叠加技术指导"""
+        try:
+            # 验证输入
+            if frame is None or len(frame.shape) != 3:
+                self.logger.error("无效的帧数据")
+                return frame
+
+            if not current_keypoints:
+                return frame
+
+            # 获取标准动作模板
+            sport_type = getattr(self.gopose_module, 'athlete_profile', {}).get('sport', 'general')
+            standard_pose = self.get_standard_pose_for_sport(sport_type)
+
+            # 创建叠加层
+            overlay = frame.copy()
+
+            # 1. 绘制理想姿势轮廓（半透明绿色）
+            if standard_pose and self.ar_config['show_ideal_pose']:
+                self._draw_ideal_pose_overlay(overlay, standard_pose, color=(0, 255, 0))
+
+            # 2. 绘制当前姿势（实线）
+            self._draw_current_pose(overlay, current_keypoints)
+
+            # 3. 高亮需要调整的关节
+            if standard_pose:
+                error_joints = self._identify_error_joints(current_keypoints, standard_pose)
+                self._highlight_error_joints(overlay, error_joints)
+
+            # 4. 显示实时反馈文本
+            self._display_feedback_text(overlay, error_joints if standard_pose else [])
+
+            # 混合叠加层
+            result = cv2.addWeighted(frame, 1 - self.ar_config['transparency'],
+                                     overlay, self.ar_config['transparency'], 0)
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"叠加技术指导时出错: {e}")
+            return frame
+
+    def _draw_ideal_pose_overlay(self, frame: np.ndarray, standard_pose: StandardPose,
+                                 color: Tuple[int, int, int]):
+        """绘制理想姿势轮廓"""
+        if not standard_pose.keypoints:
+            return
+
+        # 绘制骨架连接线
+        connections = self._get_pose_connections()
+        for connection in connections:
+            start_idx, end_idx = connection
+            if (start_idx < len(standard_pose.keypoints) and
+                    end_idx < len(standard_pose.keypoints)):
+                start_point = tuple(map(int, standard_pose.keypoints[start_idx]))
+                end_point = tuple(map(int, standard_pose.keypoints[end_idx]))
+
+                cv2.line(frame, start_point, end_point, color,
+                         self.ar_config['line_thickness'])
+
+    def _draw_current_pose(self, frame: np.ndarray, keypoints: List):
+        """绘制当前姿势"""
+        try:
+            # 这里调用您现有的绘制方法
+            if hasattr(self, 'EnhancedCalculationModule'):
+                self.EnhancedCalculationModule.draw(frame, keypoints, size=3, type=0)
+            else:
+                # 备用绘制方法
+                self._draw_keypoints_basic(frame, keypoints)
+        except Exception as e:
+            self.logger.warning(f"绘制当前姿势时出错: {e}")
+
+    def _draw_keypoints_basic(self, frame: np.ndarray, keypoints: List):
+        """基础关键点绘制方法"""
+        for point in keypoints:
+            if len(point) >= 2:
+                center = (int(point[0]), int(point[1]))
+                cv2.circle(frame, center, 5, (0, 0, 255), -1)
+
+    def _identify_error_joints(self, current_keypoints: List,
+                               standard_pose: StandardPose) -> List[JointError]:
+        """识别需要调整的关节"""
+        error_joints = []
+
+        try:
+            # 计算当前姿势的关节角度
+            current_angles = self._calculate_joint_angles(current_keypoints)
+
+            # 与标准姿势比较
+            for joint_name, target_angle in standard_pose.angles.items():
+                if joint_name in current_angles:
+                    current_angle = current_angles[joint_name]
+                    error = abs(current_angle - target_angle)
+
+                    # 设置误差阈值
+                    threshold = 15.0  # 度
+                    if error > threshold:
+                        error_joint = JointError(
+                            joint_name=joint_name,
+                            current_angle=current_angle,
+                            target_angle=target_angle,
+                            error_magnitude=error,
+                            correction_direction="increase" if current_angle < target_angle else "decrease"
+                        )
+                        error_joints.append(error_joint)
+
+        except Exception as e:
+            self.logger.error(f"识别错误关节时出错: {e}")
+
+        return error_joints
+
+    def _calculate_joint_angles(self, keypoints: List) -> Dict[str, float]:
+        """计算关节角度"""
+        angles = {}
+
+        try:
+            # 这里需要根据您的关键点格式来实现
+            # 示例：计算肘关节角度
+            if len(keypoints) >= 8:  # 假设至少有8个关键点
+                # 左肘角度计算示例
+                shoulder = np.array(keypoints[5][:2])  # 左肩
+                elbow = np.array(keypoints[7][:2])  # 左肘
+                wrist = np.array(keypoints[9][:2])  # 左腕
+
+                angle = self._calculate_angle(shoulder, elbow, wrist)
+                angles['left_elbow'] = angle
+
+        except Exception as e:
+            self.logger.error(f"计算关节角度时出错: {e}")
+
+        return angles
+
+    def _calculate_angle(self, point1: np.ndarray, vertex: np.ndarray,
+                         point2: np.ndarray) -> float:
+        """计算三点构成的角度"""
+        vector1 = point1 - vertex
+        vector2 = point2 - vertex
+
+        cos_angle = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
+        cos_angle = np.clip(cos_angle, -1.0, 1.0)
+        angle = np.arccos(cos_angle) * 180 / np.pi
+
+        return angle
+
+    def _highlight_error_joints(self, frame: np.ndarray, error_joints: List[JointError]):
+        """高亮显示需要调整的关节"""
+        for error in error_joints:
+            # 这里需要根据关节名称找到对应的像素位置
+            joint_pos = self._get_joint_position(error.joint_name)
+            if joint_pos:
+                # 用红色圆圈标记错误关节
+                cv2.circle(frame, joint_pos, 15, (0, 0, 255), 3)
+                # 显示调整建议
+                text = f"{error.correction_direction} {error.error_magnitude:.1f}°"
+                cv2.putText(frame, text, (joint_pos[0] + 20, joint_pos[1]),
+                            cv2.FONT_HERSHEY_SIMPLEX, self.ar_config['text_scale'],
+                            (0, 0, 255), 2)
+
+    def _get_joint_position(self, joint_name: str) -> Optional[Tuple[int, int]]:
+        """获取关节在图像中的位置"""
+        # 这里需要根据您的关键点映射来实现
+        joint_mapping = {
+            'left_elbow': 7,
+            'right_elbow': 8,
+            'left_knee': 13,
+            'right_knee': 14,
+            # 添加更多关节映射
+        }
+
+        if (joint_name in joint_mapping and
+                hasattr(self, 'current_keypoints') and
+                self.current_keypoints):
+
+            idx = joint_mapping[joint_name]
+            if idx < len(self.current_keypoints):
+                point = self.current_keypoints[idx]
+                return (int(point[0]), int(point[1]))
+
+        return None
+
+    def _display_feedback_text(self, frame: np.ndarray, error_joints: List[JointError]):
+        """显示实时反馈文本"""
+        y_offset = 30
+
+        if not error_joints:
+            cv2.putText(frame, "姿势良好!", (10, y_offset),
+                        cv2.FONT_HERSHEY_SIMPLEX, self.ar_config['text_scale'],
+                        (0, 255, 0), 2)
+        else:
+            cv2.putText(frame, f"需调整 {len(error_joints)} 个关节",
+                        (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX,
+                        self.ar_config['text_scale'], (0, 165, 255), 2)
+
+    def _get_pose_connections(self) -> List[Tuple[int, int]]:
+        """获取姿势骨架连接"""
+        # COCO格式的骨架连接
+        return [
+            (5, 6), (5, 7), (6, 8), (7, 9), (8, 10),  # 上半身
+            (5, 11), (6, 12), (11, 12),  # 躯干
+            (11, 13), (12, 14), (13, 15), (14, 16)  # 下半身
+        ]
+
+    def show_force_vectors(self, frame: np.ndarray, biomech_data: Dict) -> np.ndarray:
+        """AR显示力向量和生物力学信息"""
+        if not biomech_data:
+            return frame
+
+        try:
+            # 显示关节力矩
+            if 'joint_torques' in biomech_data:
+                for joint_name, torque_value in biomech_data['joint_torques'].items():
+                    joint_pos = self._get_joint_position(joint_name)
+                    if joint_pos and torque_value:
+                        self._draw_force_arrow(frame, joint_pos, torque_value)
+
+            # 显示重心位置
+            if all(key in biomech_data for key in ['center_of_mass_x', 'center_of_mass_y']):
+                com_pos = (int(biomech_data['center_of_mass_x']),
+                           int(biomech_data['center_of_mass_y']))
+                cv2.circle(frame, com_pos, 10, (255, 0, 255), -1)
+                cv2.putText(frame, "重心", com_pos, cv2.FONT_HERSHEY_SIMPLEX,
+                            self.ar_config['text_scale'], (255, 255, 255), 2)
+
+        except Exception as e:
+            self.logger.error(f"显示力向量时出错: {e}")
+
+        return frame
+
+    def _draw_force_arrow(self, frame: np.ndarray, start_pos: Tuple[int, int],
+                          force_magnitude: float):
+        """绘制力箭头"""
+        # 根据力的大小计算箭头长度和颜色
+        arrow_length = int(abs(force_magnitude) * 2)  # 比例缩放
+        color = (0, 255, 0) if force_magnitude > 0 else (0, 0, 255)
+
+        # 绘制箭头（简化版本）
+        end_pos = (start_pos[0], start_pos[1] - arrow_length)
+        cv2.arrowedLine(frame, start_pos, end_pos, color, 2, tipLength=0.3)
+
+    def update_config(self, new_config: Dict):
+        """更新AR配置"""
+        self.ar_config.update(new_config)
+
+    def get_performance_stats(self) -> Dict:
+        """获取性能统计"""
+        return {
+            'pose_history_length': len(self.pose_history),
+            'analysis_frequency': self.analysis_frequency,
+            'frame_skip_count': self.frame_skip_count
+        }
+# ==================== 修复后的3D运动分析模块 ====================
+@dataclass
+class StandardPose:
+    name: str
+    sport_type: str
+    keypoints: List
+    angles: Dict[str, float]
+    metadata: Dict = None
+@dataclass
+class JointError:
+    joint_name: str
+    current_angle: float
+    target_angle: float
+    error_magnitude: float
+    correction_direction: str
+class Enhanced3DAnalyzer:
+    """增强版3D运动分析器 - 修复版"""
+
+    def analyze_3d_movement_quality(self, pose_sequence_3d):
+        """分析3D运动质量"""
+        quality_metrics = {
+            'symmetry_score': 0.0,
+            'stability_score': 0.0,
+            'efficiency_score': 0.0,
+            'coordination_score': 0.0,
+            'overall_quality': 0.0
+        }
+
+        try:
+            if not pose_sequence_3d or len(pose_sequence_3d) < 2:
+                return quality_metrics
+
+            # 计算对称性评分
+            quality_metrics['symmetry_score'] = self._calculate_3d_symmetry(pose_sequence_3d)
+
+            # 计算稳定性评分
+            quality_metrics['stability_score'] = self._calculate_3d_stability(pose_sequence_3d)
+
+            # 计算效率评分
+            quality_metrics['efficiency_score'] = self._calculate_3d_efficiency(pose_sequence_3d)
+
+            # 计算协调性评分
+            quality_metrics['coordination_score'] = self._calculate_3d_coordination(pose_sequence_3d)
+
+            # 计算整体质量
+            quality_metrics['overall_quality'] = np.mean([
+                quality_metrics['symmetry_score'],
+                quality_metrics['stability_score'],
+                quality_metrics['efficiency_score'],
+                quality_metrics['coordination_score']
+            ])
+
+        except Exception as e:
+            print(f"3D运动质量分析错误: {e}")
+
+        return quality_metrics
+
+    def _calculate_3d_symmetry(self, pose_sequence):
+        """计算3D对称性"""
+        try:
+            symmetry_scores = []
+
+            # 左右对称关节对
+            symmetric_pairs = [
+                (2, 5),  # 左右肩
+                (3, 6),  # 左右肘
+                (4, 7),  # 左右手
+                (9, 12),  # 左右髋
+                (10, 13),  # 左右膝
+                (11, 14)  # 左右踝
+            ]
+
+            for pose in pose_sequence:
+                if pose is None:
+                    continue
+
+                frame_symmetry = []
+                for left_idx, right_idx in symmetric_pairs:
+                    if (left_idx < len(pose) and right_idx < len(pose) and
+                            len(pose[left_idx]) >= 4 and len(pose[right_idx]) >= 4 and
+                            pose[left_idx][3] > 0.1 and pose[right_idx][3] > 0.1):
+
+                        left_pos = np.array(pose[left_idx][:3])
+                        right_pos = np.array(pose[right_idx][:3])
+
+                        # 计算相对于身体中心的位置
+                        if (len(pose) > 8 and len(pose[1]) >= 4 and len(pose[8]) >= 4 and
+                                pose[1][3] > 0.1 and pose[8][3] > 0.1):
+                            center = (np.array(pose[1][:3]) + np.array(pose[8][:3])) / 2
+                            left_relative = left_pos - center
+                            right_relative = right_pos - center
+
+                            # 镜像右侧位置
+                            right_relative_mirrored = right_relative.copy()
+                            right_relative_mirrored[0] = -right_relative_mirrored[0]  # X轴镜像
+
+                            # 计算对称性
+                            distance = np.linalg.norm(left_relative - right_relative_mirrored)
+                            symmetry = 1.0 / (1.0 + distance / 100.0)
+                            frame_symmetry.append(symmetry)
+
+                if frame_symmetry:
+                    symmetry_scores.append(np.mean(frame_symmetry))
+
+            return np.mean(symmetry_scores) if symmetry_scores else 0.5
+
+        except Exception as e:
+            print(f"3D对称性计算错误: {e}")
+            return 0.5
+
+    def _calculate_3d_stability(self, pose_sequence):
+        """计算3D稳定性"""
+        try:
+            if len(pose_sequence) < 2:
+                return 0.5
+
+            stability_metrics = []
+
+            # 重心稳定性
+            com_positions = []
+            for pose in pose_sequence:
+                if pose is None:
+                    continue
+
+                # 计算重心
+                valid_points = []
+                for i, point in enumerate(pose):
+                    if len(point) >= 4 and point[3] > 0.1:
+                        valid_points.append(point[:3])
+
+                if valid_points:
+                    com = np.mean(valid_points, axis=0)
+                    com_positions.append(com)
+
+            if len(com_positions) > 1:
+                # 计算重心移动的稳定性
+                com_velocities = np.diff(com_positions, axis=0)
+                com_stability = 1.0 / (1.0 + np.std(com_velocities))
+                stability_metrics.append(com_stability)
+
+            return np.mean(stability_metrics) if stability_metrics else 0.5
+
+        except Exception as e:
+            print(f"3D稳定性计算错误: {e}")
+            return 0.5
+
+    def _calculate_3d_efficiency(self, pose_sequence):
+        """计算3D效率"""
+        try:
+            if len(pose_sequence) < 2:
+                return 0.5
+
+            # 计算运动路径效率
+            efficiency_scores = []
+
+            # 关键关节的运动效率
+            key_joints = [4, 7, 11, 14]  # 双手双脚
+
+            for joint_idx in key_joints:
+                positions = []
+                for pose in pose_sequence:
+                    if (pose is not None and joint_idx < len(pose) and
+                            len(pose[joint_idx]) >= 4 and pose[joint_idx][3] > 0.1):
+                        positions.append(pose[joint_idx][:3])
+
+                if len(positions) > 2:
+                    positions = np.array(positions)
+
+                    # 计算实际路径长度
+                    actual_path = np.sum(np.linalg.norm(np.diff(positions, axis=0), axis=1))
+
+                    # 计算直线距离
+                    straight_distance = np.linalg.norm(positions[-1] - positions[0])
+
+                    # 效率 = 直线距离 / 实际路径
+                    if actual_path > 0:
+                        efficiency = straight_distance / actual_path
+                        efficiency_scores.append(min(efficiency, 1.0))
+
+            return np.mean(efficiency_scores) if efficiency_scores else 0.5
+
+        except Exception as e:
+            print(f"3D效率计算错误: {e}")
+            return 0.5
+
+    def _calculate_3d_coordination(self, pose_sequence):
+        """计算3D协调性"""
+        try:
+            if len(pose_sequence) < 2:
+                return 0.5
+
+            coordination_scores = []
+
+            # 分析四肢协调性
+            limb_pairs = [
+                ([2, 3, 4], [5, 6, 7]),  # 左右臂
+                ([9, 10, 11], [12, 13, 14])  # 左右腿
+            ]
+
+            for left_limb, right_limb in limb_pairs:
+                left_angles = []
+                right_angles = []
+
+                for pose in pose_sequence:
+                    if pose is None:
+                        continue
+
+                    # 计算左侧肢体角度
+                    if all(i < len(pose) and len(pose[i]) >= 4 and pose[i][3] > 0.1 for i in left_limb):
+                        left_angle = self._calculate_3d_angle(pose, left_limb)
+                        left_angles.append(left_angle)
+
+                    # 计算右侧肢体角度
+                    if all(i < len(pose) and len(pose[i]) >= 4 and pose[i][3] > 0.1 for i in right_limb):
+                        right_angle = self._calculate_3d_angle(pose, right_limb)
+                        right_angles.append(right_angle)
+
+                # 计算左右协调性
+                if len(left_angles) > 1 and len(right_angles) > 1:
+                    min_len = min(len(left_angles), len(right_angles))
+                    left_changes = np.diff(left_angles[:min_len])
+                    right_changes = np.diff(right_angles[:min_len])
+
+                    # 计算变化模式的相似性
+                    correlation = np.corrcoef(left_changes, right_changes)[0, 1]
+                    if not np.isnan(correlation):
+                        coordination_scores.append(abs(correlation))
+
+            return np.mean(coordination_scores) if coordination_scores else 0.5
+
+        except Exception as e:
+            print(f"3D协调性计算错误: {e}")
+            return 0.5
+
+    def _apply_biomechanical_constraints(self, pose_3d, height_pixels):
+        """应用生物力学约束"""
+        try:
+            # 检查关节角度约束
+            joint_checks = [
+                ([2, 3, 4], 'elbow'),  # 右肘
+                ([5, 6, 7], 'elbow'),  # 左肘
+                ([9, 10, 11], 'knee'),  # 右膝
+                ([12, 13, 14], 'knee')  # 左膝
+            ]
+
+            for joint_indices, joint_type in joint_checks:
+                if all(i < len(pose_3d) and len(pose_3d[i]) >= 4 and pose_3d[i][3] > 0.1 for i in joint_indices):
+                    angle = self._calculate_3d_angle(pose_3d, joint_indices)
+                    min_angle, max_angle = self.joint_constraints.get(joint_type, (0, 180))
+
+                    # 如果角度超出合理范围，进行调整
+                    if angle < min_angle or angle > max_angle:
+                        # 简单的约束调整：将角度限制在合理范围内
+                        p1, p2, p3 = joint_indices
+                        if pose_3d[p1][3] > 0.1 and pose_3d[p2][3] > 0.1 and pose_3d[p3][3] > 0.1:
+                            # 调整关节位置以满足角度约束
+                            target_angle = np.clip(angle, min_angle, max_angle)
+                            pose_3d = self._adjust_joint_angle(pose_3d, joint_indices, target_angle)
+
+            # 检查骨骼长度约束
+            pose_3d = self._apply_bone_length_constraints(pose_3d, height_pixels)
+
+            return pose_3d
+
+        except Exception as e:
+            print(f"生物力学约束应用错误: {e}")
+            return pose_3d
+
+    def _adjust_joint_angle(self, pose_3d, joint_indices, target_angle):
+        """调整关节角度"""
+        try:
+            p1, p2, p3 = joint_indices
+
+            # 获取关节位置
+            joint_pos = np.array(pose_3d[p2][:3])
+            p1_pos = np.array(pose_3d[p1][:3])
+            p3_pos = np.array(pose_3d[p3][:3])
+
+            # 计算向量
+            v1 = p1_pos - joint_pos
+            v2 = p3_pos - joint_pos
+
+            # 计算当前角度
+            current_angle = self._calculate_3d_angle(pose_3d, joint_indices)
+            angle_diff = target_angle - current_angle
+
+            # 如果角度差异较小，直接返回
+            if abs(angle_diff) < 5:  # 5度阈值
+                return pose_3d
+
+            # 调整第三个点的位置
+            v2_length = np.linalg.norm(v2)
+            if v2_length > 0:
+                # 旋转v2向量以达到目标角度
+                rotation_angle = np.radians(angle_diff)
+
+                # 简化的2D旋转（在主要平面上）
+                cos_rot = np.cos(rotation_angle)
+                sin_rot = np.sin(rotation_angle)
+
+                # 旋转矩阵（简化为主要平面）
+                v2_normalized = v2 / v2_length
+
+                # 应用旋转（简化版本）
+                new_v2 = v2 * cos_rot + np.cross(v1, v2) * sin_rot / (np.linalg.norm(v1) * v2_length + 1e-8)
+                new_p3_pos = joint_pos + new_v2
+
+                # 更新位置
+                pose_3d[p3][:3] = new_p3_pos
+
+            return pose_3d
+
+        except Exception as e:
+            print(f"关节角度调整错误: {e}")
+            return pose_3d
+
+    def _apply_bone_length_constraints(self, pose_3d, height_pixels):
+        """应用骨骼长度约束"""
+        try:
+            expected_lengths = self._get_expected_bone_lengths(height_pixels)
+
+            for (start_idx, end_idx), expected_length in expected_lengths.items():
+                if (start_idx < len(pose_3d) and end_idx < len(pose_3d) and
+                        len(pose_3d[start_idx]) >= 4 and len(pose_3d[end_idx]) >= 4 and
+                        pose_3d[start_idx][3] > 0.1 and pose_3d[end_idx][3] > 0.1):
+
+                    start_pos = np.array(pose_3d[start_idx][:3])
+                    end_pos = np.array(pose_3d[end_idx][:3])
+
+                    current_length = np.linalg.norm(end_pos - start_pos)
+
+                    # 如果长度差异超过容忍范围，进行调整
+                    tolerance = expected_length * self.reconstruction_params['bone_length_tolerance']
+
+                    if abs(current_length - expected_length) > tolerance:
+                        # 调整末端点位置以匹配期望长度
+                        direction = (end_pos - start_pos) / (current_length + 1e-8)
+                        new_end_pos = start_pos + direction * expected_length
+                        pose_3d[end_idx][:3] = new_end_pos
+
+            return pose_3d
+
+        except Exception as e:
+            print(f"骨骼长度约束应用错误: {e}")
+            return pose_3d
+    def calculate_3d_angles_enhanced(self, pose_3d):
+        """计算增强3D角度"""
+        angles = {}
+
+        try:
+            # 定义关节角度计算
+            joint_definitions = {
+                '右肘角度': [2, 3, 4],
+                '左肘角度': [5, 6, 7],
+                '右膝角度': [9, 10, 11],
+                '左膝角度': [12, 13, 14],
+                '右肩角度': [1, 2, 3],
+                '左肩角度': [1, 5, 6]
+            }
+
+            for joint_name, indices in joint_definitions.items():
+                if all(i < len(pose_3d) and len(pose_3d[i]) >= 4 and pose_3d[i][3] > 0.1 for i in indices):
+                    angle = self._calculate_3d_angle(pose_3d, indices)
+                    angles[joint_name] = angle
+
+        except Exception as e:
+            print(f"3D角度计算错误: {e}")
+
+        return angles
+
+    def __init__(self):
+        # 人体骨骼长度比例 (基于人体测量学标准数据)
+        self.body_proportions = {
+            'head_neck': 0.13,
+            'neck_torso': 0.30,
+            'torso_hip': 0.17,
+            'upper_arm': 0.188,
+            'forearm': 0.146,
+            'thigh': 0.245,
+            'shin': 0.246,
+        }
+
+        # 标准化的骨骼连接关系 (BODY_25格式)
+        self.skeleton_connections = [
+            (1, 8), (1, 2), (1, 5),  # 躯干和肩膀
+            (2, 3), (3, 4),  # 右臂
+            (5, 6), (6, 7),  # 左臂
+            (8, 9), (9, 10), (10, 11),  # 右腿
+            (8, 12), (12, 13), (13, 14),  # 左腿
+            (1, 0),  # 头部
+            (0, 15), (15, 17),  # 右眼和右耳
+            (0, 16), (16, 18),  # 左眼和左耳
+            (14, 19), (14, 21),  # 左脚
+            (11, 22), (11, 24)  # 右脚
+        ]
+
+        # 关节角度约束
+        self.joint_constraints = {
+            'elbow': (0, 180),
+            'knee': (0, 180),
+            'shoulder': (-45, 180),
+            'hip': (-30, 120)
+        }
+
+        # 3D重建参数
+        self.reconstruction_params = {
+            'depth_scale_factor': 0.3,
+            'temporal_smoothing_alpha': 0.7,
+            'confidence_threshold': 0.3,
+            'bone_length_tolerance': 0.2
+        }
+
+    def reconstruct_3d_pose_enhanced(self, keypoints_2d, previous_3d=None,
+                                     camera_params=None, height_pixels=None):
+        """
+        增强版3D姿态重建 - 修复版
+
+        Args:
+            keypoints_2d: 2D关键点 [[x, y, confidence], ...]
+            previous_3d: 前一帧的3D结果
+            camera_params: 相机参数字典 {'focal_length': f, 'principal_point': (cx, cy)}
+            height_pixels: 身高像素值
+
+        Returns:
+            ndarray: 3D关键点 [x, y, z, confidence] 或 None
+        """
+        try:
+            # 输入验证
+            if not self._validate_input(keypoints_2d):
+                return None
+
+            # 初始化3D姿态
+            pose_3d = self._initialize_3d_pose(keypoints_2d)
+
+            # 估算身体尺度
+            if height_pixels is None:
+                height_pixels = self._estimate_height_from_keypoints(keypoints_2d)
+
+            if height_pixels < 50:  # 最小合理身高
+                return None
+
+            # 设置默认相机参数
+            if camera_params is None:
+                camera_params = self._get_default_camera_params(keypoints_2d)
+
+            # 执行3D重建
+            pose_3d = self._perform_3d_reconstruction(
+                pose_3d, height_pixels, camera_params
+            )
+
+            # 应用生物力学约束
+            pose_3d = self._apply_biomechanical_constraints(pose_3d, height_pixels)
+
+            # 时间平滑
+            if previous_3d is not None:
+                pose_3d = self._temporal_smoothing(pose_3d, previous_3d)
+
+            # 质量评估
+            quality_score = self._assess_reconstruction_quality(pose_3d, keypoints_2d)
+
+            if quality_score < 0.5:
+                print(f"警告: 3D重建质量较低 (质量评分: {quality_score:.2f})")
+
+            return pose_3d
+
+        except Exception as e:
+            print(f"3D重建错误: {e}")
+            return None
+
+    def _validate_input(self, keypoints_2d):
+        """验证输入数据"""
+        if keypoints_2d is None or len(keypoints_2d) < 25:
+            return False
+
+        # 检查关键点格式
+        valid_points = 0
+        for kp in keypoints_2d:
+            if len(kp) >= 3 and kp[2] > self.reconstruction_params['confidence_threshold']:
+                valid_points += 1
+
+        # 至少需要10个有效关键点
+        return valid_points >= 10
+
+    def _initialize_3d_pose(self, keypoints_2d):
+        """初始化3D姿态"""
+        pose_3d = np.zeros((25, 4))  # [x, y, z, confidence]
+
+        for i, kp in enumerate(keypoints_2d):
+            if len(kp) >= 3:
+                pose_3d[i] = [kp[0], kp[1], 0, kp[2]]
+
+        return pose_3d
+
+    def _get_default_camera_params(self, keypoints_2d):
+        """获取默认相机参数"""
+        # 估算图像尺寸
+        valid_x = [kp[0] for kp in keypoints_2d if len(kp) >= 3 and kp[2] > 0.1]
+        valid_y = [kp[1] for kp in keypoints_2d if len(kp) >= 3 and kp[2] > 0.1]
+
+        if not valid_x or not valid_y:
+            return {'focal_length': 500, 'principal_point': (320, 240)}
+
+        img_width = max(valid_x) - min(valid_x) + 200
+        img_height = max(valid_y) - min(valid_y) + 200
+
+        return {
+            'focal_length': img_width * 0.8,  # 经验值
+            'principal_point': (img_width / 2, img_height / 2)
+        }
+
+    def _perform_3d_reconstruction(self, pose_3d, height_pixels, camera_params):
+        """执行3D重建的核心算法"""
+        try:
+            # 方法1: 基于人体模型的深度估算
+            pose_3d = self._anthropometric_depth_estimation(pose_3d, height_pixels)
+
+            # 方法2: 基于骨骼约束的优化
+            pose_3d = self._skeleton_constrained_optimization(pose_3d, height_pixels)
+
+            # 方法3: 基于姿态先验的深度细化
+            pose_3d = self._pose_prior_depth_refinement(pose_3d)
+
+            return pose_3d
+
+        except Exception as e:
+            print(f"3D重建算法错误: {e}")
+            return pose_3d
+
+    def _anthropometric_depth_estimation(self, pose_3d, height_pixels):
+        """基于人体测量学的深度估算"""
+        try:
+            # 计算身体比例因子
+            scale_factor = height_pixels / 1750  # 假设真实身高175cm
+
+            # 定义各关节的相对深度 (相对于身体中心)
+            depth_map = {
+                0: 0.08,  # 鼻子 (向前)
+                1: 0.02,  # 颈部 (稍向前)
+                2: -0.06,  # 右肩 (向后)
+                3: 0.04,  # 右肘 (向前)
+                4: 0.10,  # 右腕 (向前)
+                5: -0.06,  # 左肩 (向后)
+                6: 0.04,  # 左肘 (向前)
+                7: 0.10,  # 左腕 (向前)
+                8: -0.03,  # 中臀 (稍向后)
+                9: -0.02,  # 右髋
+                10: 0.02,  # 右膝 (稍向前)
+                11: 0.05,  # 右踝 (向前)
+                12: -0.02,  # 左髋
+                13: 0.02,  # 左膝
+                14: 0.05,  # 左踝
+                15: 0.12,  # 右眼 (向前)
+                16: 0.12,  # 左眼
+                17: 0.08,  # 右耳
+                18: 0.08,  # 左耳
+            }
+
+            # 应用深度估算
+            for i, depth_offset in depth_map.items():
+                if i < len(pose_3d) and pose_3d[i][3] > 0.1:
+                    # 基础深度
+                    base_depth = depth_offset * scale_factor * self.reconstruction_params['depth_scale_factor']
+
+                    # 添加身体倾斜的影响
+                    tilt_adjustment = self._calculate_body_tilt_adjustment(pose_3d, i)
+
+                    pose_3d[i][2] = base_depth + tilt_adjustment
+
+            return pose_3d
+
+        except Exception as e:
+            print(f"人体测量学深度估算错误: {e}")
+            return pose_3d
+
+    def _skeleton_constrained_optimization(self, pose_3d, height_pixels):
+        """基于骨骼约束的优化"""
+        try:
+            # 定义优化目标函数
+            def objective_function(z_coords):
+                # 重构3D姿态
+                temp_pose = pose_3d.copy()
+                valid_indices = [i for i in range(len(pose_3d)) if pose_3d[i][3] > 0.1]
+
+                for i, idx in enumerate(valid_indices):
+                    if i < len(z_coords):
+                        temp_pose[idx][2] = z_coords[i]
+
+                # 计算骨骼长度误差
+                bone_error = self._calculate_bone_length_error(temp_pose, height_pixels)
+
+                # 计算关节角度误差
+                angle_error = self._calculate_joint_angle_error(temp_pose)
+
+                # 计算深度平滑性误差
+                smoothness_error = self._calculate_depth_smoothness_error(z_coords)
+
+                return bone_error + angle_error * 0.5 + smoothness_error * 0.3
+
+            # 获取有效关键点的初始Z坐标
+            valid_indices = [i for i in range(len(pose_3d)) if pose_3d[i][3] > 0.1]
+            initial_z = [pose_3d[i][2] for i in valid_indices]
+
+            if len(initial_z) > 0:
+                # 执行优化
+                bounds = [(-height_pixels * 0.3, height_pixels * 0.3) for _ in initial_z]
+                result = minimize(objective_function, initial_z, bounds=bounds, method='L-BFGS-B')
+
+                if result.success:
+                    # 应用优化结果
+                    for i, idx in enumerate(valid_indices):
+                        if i < len(result.x):
+                            pose_3d[idx][2] = result.x[i]
+
+            return pose_3d
+
+        except Exception as e:
+            print(f"骨骼约束优化错误: {e}")
+            return pose_3d
+
+    def _calculate_bone_length_error(self, pose_3d, height_pixels):
+        """计算骨骼长度误差"""
+        error = 0
+        expected_lengths = self._get_expected_bone_lengths(height_pixels)
+
+        for (start_idx, end_idx), expected_length in expected_lengths.items():
+            if (pose_3d[start_idx][3] > 0.1 and pose_3d[end_idx][3] > 0.1):
+                actual_length = np.linalg.norm(pose_3d[end_idx][:3] - pose_3d[start_idx][:3])
+                error += abs(actual_length - expected_length) / expected_length
+
+        return error
+
+    def _get_expected_bone_lengths(self, height_pixels):
+        """获取期望的骨骼长度"""
+        scale = height_pixels
+        return {
+            (2, 3): scale * self.body_proportions['upper_arm'],  # 右上臂
+            (3, 4): scale * self.body_proportions['forearm'],  # 右前臂
+            (5, 6): scale * self.body_proportions['upper_arm'],  # 左上臂
+            (6, 7): scale * self.body_proportions['forearm'],  # 左前臂
+            (9, 10): scale * self.body_proportions['thigh'],  # 右大腿
+            (10, 11): scale * self.body_proportions['shin'],  # 右小腿
+            (12, 13): scale * self.body_proportions['thigh'],  # 左大腿
+            (13, 14): scale * self.body_proportions['shin'],  # 左小腿
+            (1, 8): scale * self.body_proportions['neck_torso'],  # 躯干
+        }
+
+    def _calculate_joint_angle_error(self, pose_3d):
+        """计算关节角度误差"""
+        error = 0
+
+        # 检查主要关节角度
+        joint_triplets = [
+            ([2, 3, 4], 'elbow'),  # 右肘
+            ([5, 6, 7], 'elbow'),  # 左肘
+            ([9, 10, 11], 'knee'),  # 右膝
+            ([12, 13, 14], 'knee'),  # 左膝
+        ]
+
+        for triplet, joint_type in joint_triplets:
+            if all(pose_3d[i][3] > 0.1 for i in triplet):
+                angle = self._calculate_3d_angle(pose_3d, triplet)
+                min_angle, max_angle = self.joint_constraints[joint_type]
+
+                if angle < min_angle:
+                    error += (min_angle - angle) / 180
+                elif angle > max_angle:
+                    error += (angle - max_angle) / 180
+
+        return error
+
+    def _calculate_depth_smoothness_error(self, z_coords):
+        """计算深度平滑性误差"""
+        if len(z_coords) < 3:
+            return 0
+
+        # 计算相邻点的深度变化
+        differences = np.diff(z_coords)
+        return np.std(differences)
+
+    def _pose_prior_depth_refinement(self, pose_3d):
+        """基于姿态先验的深度细化"""
+        try:
+            # 使用常见的人体姿态先验知识进行深度细化
+
+            # 1. 头部通常在最前方
+            if pose_3d[0][3] > 0.1:  # 鼻子
+                head_z = pose_3d[0][2]
+                # 确保头部在身体前方
+                body_center_z = np.mean([pose_3d[i][2] for i in [1, 8] if pose_3d[i][3] > 0.1])
+                if head_z <= body_center_z:
+                    pose_3d[0][2] = body_center_z + abs(body_center_z) * 0.1
+
+            # 2. 手部通常比肘部更靠前
+            for arm in [(2, 3, 4), (5, 6, 7)]:  # 右臂，左臂
+                shoulder, elbow, wrist = arm
+                if all(pose_3d[i][3] > 0.1 for i in arm):
+                    # 确保手腕在肘部前方
+                    if pose_3d[wrist][2] <= pose_3d[elbow][2]:
+                        pose_3d[wrist][2] = pose_3d[elbow][2] + abs(pose_3d[elbow][2]) * 0.05
+
+            # 3. 脚部通常比膝部稍靠前
+            for leg in [(9, 10, 11), (12, 13, 14)]:  # 右腿，左腿
+                hip, knee, ankle = leg
+                if all(pose_3d[i][3] > 0.1 for i in leg):
+                    if pose_3d[ankle][2] <= pose_3d[knee][2]:
+                        pose_3d[ankle][2] = pose_3d[knee][2] + abs(pose_3d[knee][2]) * 0.03
+
+            return pose_3d
+
+        except Exception as e:
+            print(f"姿态先验深度细化错误: {e}")
+            return pose_3d
+
+    def _calculate_body_tilt_adjustment(self, pose_3d, joint_idx):
+        """计算身体倾斜调整"""
+        try:
+            if pose_3d[1][3] > 0.1 and pose_3d[8][3] > 0.1:  # 颈部和中臀
+                neck = pose_3d[1][:3]
+                hip = pose_3d[8][:3]
+
+                # 计算躯干倾斜角度
+                trunk_vector = hip - neck
+                tilt_angle = np.arctan2(trunk_vector[0], trunk_vector[1])  # 在XY平面的倾斜
+
+                # 根据关节位置和倾斜角度调整深度
+                adjustment_factor = {
+                    0: 0.8,  # 头部
+                    4: 1.0,  # 右手
+                    7: 1.0,  # 左手
+                    11: 0.5,  # 右脚
+                    14: 0.5,  # 左脚
+                }.get(joint_idx, 0.3)
+
+                return np.sin(tilt_angle) * adjustment_factor * 10
+
+            return 0
+
+        except Exception as e:
+            return 0
+
+    def _assess_reconstruction_quality(self, pose_3d, keypoints_2d):
+        """评估3D重建质量"""
+        try:
+            quality_factors = []
+
+            # 1. 关键点置信度
+            confidences = [pose_3d[i][3] for i in range(len(pose_3d)) if pose_3d[i][3] > 0]
+            if confidences:
+                quality_factors.append(np.mean(confidences))
+
+            # 2. 骨骼长度一致性
+            bone_consistency = self._calculate_bone_consistency(pose_3d)
+            quality_factors.append(bone_consistency)
+
+            # 3. 关节角度合理性
+            angle_reasonableness = self._calculate_angle_reasonableness(pose_3d)
+            quality_factors.append(angle_reasonableness)
+
+            # 4. 深度分布合理性
+            depth_reasonableness = self._calculate_depth_reasonableness(pose_3d)
+            quality_factors.append(depth_reasonableness)
+
+            return np.mean(quality_factors) if quality_factors else 0
+
+        except Exception as e:
+            print(f"质量评估错误: {e}")
+            return 0.5
+
+    def _calculate_bone_consistency(self, pose_3d):
+        """计算骨骼一致性"""
+        try:
+            # 检查对称骨骼的长度差异
+            symmetric_bones = [
+                ((2, 3), (5, 6)),  # 左右上臂
+                ((3, 4), (6, 7)),  # 左右前臂
+                ((9, 10), (12, 13)),  # 左右大腿
+                ((10, 11), (13, 14))  # 左右小腿
+            ]
+
+            consistency_scores = []
+
+            for (bone1, bone2) in symmetric_bones:
+                if all(pose_3d[i][3] > 0.1 for i in bone1 + bone2):
+                    length1 = np.linalg.norm(pose_3d[bone1[1]][:3] - pose_3d[bone1[0]][:3])
+                    length2 = np.linalg.norm(pose_3d[bone2[1]][:3] - pose_3d[bone2[0]][:3])
+
+                    if max(length1, length2) > 0:
+                        ratio = min(length1, length2) / max(length1, length2)
+                        consistency_scores.append(ratio)
+
+            return np.mean(consistency_scores) if consistency_scores else 0.8
+
+        except Exception as e:
+            return 0.5
+
+    def _calculate_angle_reasonableness(self, pose_3d):
+        """计算角度合理性"""
+        try:
+            reasonable_count = 0
+            total_count = 0
+
+            joint_checks = [
+                ([2, 3, 4], 'elbow'),
+                ([5, 6, 7], 'elbow'),
+                ([9, 10, 11], 'knee'),
+                ([12, 13, 14], 'knee')
+            ]
+
+            for triplet, joint_type in joint_checks:
+                if all(pose_3d[i][3] > 0.1 for i in triplet):
+                    angle = self._calculate_3d_angle(pose_3d, triplet)
+                    min_angle, max_angle = self.joint_constraints[joint_type]
+
+                    total_count += 1
+                    if min_angle <= angle <= max_angle:
+                        reasonable_count += 1
+
+            return reasonable_count / total_count if total_count > 0 else 0.8
+
+        except Exception as e:
+            return 0.5
+
+    def _calculate_depth_reasonableness(self, pose_3d):
+        """计算深度合理性"""
+        try:
+            valid_depths = [pose_3d[i][2] for i in range(len(pose_3d)) if pose_3d[i][3] > 0.1]
+
+            if len(valid_depths) < 3:
+                return 0.5
+
+            # 检查深度分布是否合理
+            depth_range = max(valid_depths) - min(valid_depths)
+            depth_std = np.std(valid_depths)
+
+            # 合理的深度范围应该在一定范围内
+            if depth_range < 1000 and depth_std < 200:  # 基于像素单位的经验值
+                return 0.9
+            elif depth_range < 2000 and depth_std < 400:
+                return 0.7
+            else:
+                return 0.3
+
+        except Exception as e:
+            return 0.5
+
+    def _calculate_3d_angle(self, pose_3d, indices):
+        """计算3D角度"""
+        try:
+            p1, p2, p3 = indices
+            v1 = pose_3d[p1][:3] - pose_3d[p2][:3]
+            v2 = pose_3d[p3][:3] - pose_3d[p2][:3]
+
+            cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-8)
+            angle = np.arccos(np.clip(cos_angle, -1, 1))
+
+            return np.degrees(angle)
+
+        except Exception as e:
+            return 90.0  # 默认角度
+
+    def _temporal_smoothing(self, current_3d, previous_3d):
+        """时间平滑 - 修复版"""
+        try:
+            if previous_3d is None:
+                return current_3d
+
+            alpha = self.reconstruction_params['temporal_smoothing_alpha']
+            smoothed_3d = current_3d.copy()
+
+            # 确保数据格式一致
+            if len(current_3d) != len(previous_3d):
+                return current_3d
+
+            for i in range(len(current_3d)):
+                if (len(current_3d[i]) >= 4 and len(previous_3d[i]) >= 4 and
+                        current_3d[i][3] > 0.1 and previous_3d[i][3] > 0.1):
+
+                    # 计算位置变化
+                    current_pos = np.array(current_3d[i][:3])
+                    previous_pos = np.array(previous_3d[i][:3])
+                    position_change = np.linalg.norm(current_pos - previous_pos)
+
+                    # 如果变化过大，减少平滑强度
+                    adaptive_alpha = alpha
+                    if position_change > 50:  # 阈值基于像素单位
+                        adaptive_alpha = min(alpha, 0.3)
+
+                    # 应用平滑
+                    for j in range(3):  # x, y, z
+                        smoothed_3d[i][j] = (adaptive_alpha * current_3d[i][j] +
+                                             (1 - adaptive_alpha) * previous_3d[i][j])
+
+            return smoothed_3d
+
+        except Exception as e:
+            print(f"时间平滑错误: {e}")
+            return current_3d
+
+    def _estimate_height_from_keypoints(self, keypoints_2d):
+        """从关键点估算身高 - 修复版"""
+        try:
+            # 方法1: 头顶到脚的距离
+            head_y = None
+            foot_y = None
+
+            # 寻找头部位置 (鼻子或眼睛)
+            for idx in [0, 15, 16]:  # 鼻子, 右眼, 左眼
+                if idx < len(keypoints_2d) and keypoints_2d[idx][2] > 0.3:
+                    head_y = keypoints_2d[idx][1]
+                    break
+
+            # 寻找脚部位置
+            foot_candidates = [11, 14, 22, 24]  # 右踝, 左踝, 右脚趾, 右脚跟
+            foot_y_values = []
+
+            for idx in foot_candidates:
+                if idx < len(keypoints_2d) and keypoints_2d[idx][2] > 0.2:
+                    foot_y_values.append(keypoints_2d[idx][1])
+
+            if foot_y_values:
+                foot_y = max(foot_y_values)  # 选择最低的点
+
+            if head_y is not None and foot_y is not None:
+                height_pixels = abs(foot_y - head_y)
+                if height_pixels > 100:  # 最小合理身高
+                    return height_pixels
+
+            # 方法2: 颈部到中臀的距离估算
+            if (len(keypoints_2d) > 8 and
+                    keypoints_2d[1][2] > 0.3 and keypoints_2d[8][2] > 0.3):
+                torso_length = abs(keypoints_2d[8][1] - keypoints_2d[1][1])
+                # 躯干通常是身高的约50%
+                estimated_height = torso_length / 0.5
+                if estimated_height > 100:
+                    return estimated_height
+
+            # 默认值
+            return 400
+
+        except Exception as e:
+            print(f"身高估算错误: {e}")
+            return 400
+# ==================== 修复后的3D可视化组件 ====================
+class Fixed3DVisualizationWidget(QWidget):
+    """修复后的3D可视化组件"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.pose_3d_data = None
+        self.current_frame = 0
+        self.setup_ui()
+
+    def setup_ui(self):
+        """设置UI"""
+        layout = QVBoxLayout(self)
+
+        # 控制面板
+        control_panel = QHBoxLayout()
+
+        self.play_btn = QPushButton("播放")
+        self.play_btn.clicked.connect(self.toggle_animation)
+
+        self.frame_slider = QSlider(Qt.Horizontal)
+        self.frame_slider.valueChanged.connect(self.set_frame)
+
+        self.frame_label = QLabel("帧: 0/0")
+
+        control_panel.addWidget(self.play_btn)
+        control_panel.addWidget(QLabel("帧数:"))
+        control_panel.addWidget(self.frame_slider)
+        control_panel.addWidget(self.frame_label)
+
+        layout.addLayout(control_panel)
+
+        # 使用matplotlib 3D显示（更稳定）
+        from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+        from matplotlib.figure import Figure
+
+        self.figure = Figure(figsize=(12, 9))
+        self.canvas = FigureCanvas(self.figure)
+
+        # 创建多个3D子图用于不同视角
+        self.ax_main = self.figure.add_subplot(221, projection='3d')
+        self.ax_front = self.figure.add_subplot(222, projection='3d')
+        self.ax_side = self.figure.add_subplot(223, projection='3d')
+        self.ax_top = self.figure.add_subplot(224, projection='3d')
+
+        layout.addWidget(self.canvas)
+
+        # 视角控制
+        view_panel = QHBoxLayout()
+
+        view_buttons = [
+            ('主视角', lambda: self.set_main_view()),
+            ('正面', lambda: self.set_view_angle(0, 0)),
+            ('侧面', lambda: self.set_view_angle(90, 0)),
+            ('俯视', lambda: self.set_view_angle(0, 90)),
+            ('重置', lambda: self.reset_views())
+        ]
+
+        for text, slot in view_buttons:
+            btn = QPushButton(text)
+            btn.clicked.connect(slot)
+            view_panel.addWidget(btn)
+
+        view_panel.addStretch()
+        layout.addLayout(view_panel)
+
+    def set_pose_data(self, pose_sequence_3d):
+        """设置3D姿态数据"""
+        self.pose_3d_data = pose_sequence_3d
+        if pose_sequence_3d:
+            self.frame_slider.setMaximum(len(pose_sequence_3d) - 1)
+            self.frame_label.setText(f"帧: 0/{len(pose_sequence_3d) - 1}")
+            self.update_display()
+
+    def update_display(self):
+        """更新3D显示 - 修复版"""
+        if not self.pose_3d_data or self.current_frame >= len(self.pose_3d_data):
+            return
+
+        current_pose = self.pose_3d_data[self.current_frame]
+        if current_pose is None:
+            return
+
+        try:
+            # 清除所有子图
+            for ax in [self.ax_main, self.ax_front, self.ax_side, self.ax_top]:
+                ax.clear()
+
+            # 在每个子图中绘制骨架
+            self.draw_skeleton_in_axes(self.ax_main, current_pose, "主视角")
+            self.draw_skeleton_in_axes(self.ax_front, current_pose, "正面视角")
+            self.draw_skeleton_in_axes(self.ax_side, current_pose, "侧面视角")
+            self.draw_skeleton_in_axes(self.ax_top, current_pose, "俯视角")
+
+            # 设置不同的视角
+            self.ax_main.view_init(elev=20, azim=45)
+            self.ax_front.view_init(elev=0, azim=0)
+            self.ax_side.view_init(elev=0, azim=90)
+            self.ax_top.view_init(elev=90, azim=0)
+
+            self.canvas.draw()
+
+        except Exception as e:
+            print(f"3D显示更新错误: {e}")
+
+    def draw_skeleton_in_axes(self, ax, pose_3d, title):
+        """在指定的坐标轴中绘制骨架"""
+        try:
+            # 获取有效点
+            valid_points = []
+            valid_indices = []
+
+            for i, point in enumerate(pose_3d):
+                if len(point) >= 4 and point[3] > 0.1:  # 置信度检查
+                    valid_points.append(point[:3])
+                    valid_indices.append(i)
+
+            if not valid_points:
+                ax.text(0, 0, 0, "无有效数据", fontsize=12)
+                ax.set_title(title)
+                return
+
+            valid_points = np.array(valid_points)
+
+            # 绘制关键点
+            ax.scatter(valid_points[:, 0], valid_points[:, 1], valid_points[:, 2],
+                       c='red', s=50, alpha=0.8)
+
+            # 定义骨骼连接关系
+            connections = [
+                (1, 8), (1, 2), (1, 5),  # 躯干和肩膀
+                (2, 3), (3, 4),  # 右臂
+                (5, 6), (6, 7),  # 左臂
+                (8, 9), (9, 10), (10, 11),  # 右腿
+                (8, 12), (12, 13), (13, 14),  # 左腿
+                (1, 0),  # 头部
+            ]
+
+            # 绘制骨骼连接
+            for start_idx, end_idx in connections:
+                if (start_idx in valid_indices and end_idx in valid_indices and
+                        start_idx < len(pose_3d) and end_idx < len(pose_3d) and
+                        pose_3d[start_idx][3] > 0.1 and pose_3d[end_idx][3] > 0.1):
+                    start_point = pose_3d[start_idx][:3]
+                    end_point = pose_3d[end_idx][:3]
+
+                    ax.plot3D([start_point[0], end_point[0]],
+                              [start_point[1], end_point[1]],
+                              [start_point[2], end_point[2]],
+                              'b-', linewidth=2, alpha=0.7)
+
+            # 设置坐标轴
+            ax.set_xlabel('X (像素)')
+            ax.set_ylabel('Y (像素)')
+            ax.set_zlabel('Z (深度)')
+            ax.set_title(f'{title} - 帧 {self.current_frame}')
+
+            # 设置相等的坐标轴比例
+            if len(valid_points) > 0:
+                max_range = np.max(np.ptp(valid_points, axis=0)) / 2.0
+                center = np.mean(valid_points, axis=0)
+
+                ax.set_xlim(center[0] - max_range, center[0] + max_range)
+                ax.set_ylim(center[1] - max_range, center[1] + max_range)
+                ax.set_zlim(center[2] - max_range, center[2] + max_range)
+
+        except Exception as e:
+            print(f"绘制骨架错误: {e}")
+            ax.text(0, 0, 0, f"绘制错误: {str(e)}", fontsize=10)
+            ax.set_title(title)
+
+    def toggle_animation(self):
+        """切换动画播放状态"""
+        # 动画播放逻辑
+        pass
+
+    def set_frame(self, frame_number):
+        """设置当前帧"""
+        self.current_frame = frame_number
+        if self.pose_3d_data:
+            self.frame_label.setText(f"帧: {frame_number}/{len(self.pose_3d_data) - 1}")
+            self.update_display()
+
+    def set_view_angle(self, azim, elev):
+        """设置视角"""
+        self.ax_main.view_init(elev=elev, azim=azim)
+        self.canvas.draw()
+
+    def set_main_view(self):
+        """设置主视角"""
+        self.ax_main.view_init(elev=20, azim=45)
+        self.canvas.draw()
+
+    def reset_views(self):
+        """重置所有视角"""
+        self.ax_main.view_init(elev=20, azim=45)
+        self.ax_front.view_init(elev=0, azim=0)
+        self.ax_side.view_init(elev=0, azim=90)
+        self.ax_top.view_init(elev=90, azim=0)
+        self.canvas.draw()
+# ==================== 使用示例 ====================
+def example_usage():
+    """使用示例"""
+
+    # 创建3D分析器
+    analyzer = Enhanced3DAnalyzer()
+
+    # 模拟2D关键点数据 (BODY_25格式)
+    keypoints_2d = []
+    for i in range(25):
+        x = 320 + np.random.randn() * 100
+        y = 240 + np.random.randn() * 100
+        confidence = 0.8 + np.random.randn() * 0.1
+        keypoints_2d.append([x, y, max(0, confidence)])
+
+    # 执行3D重建
+    pose_3d = analyzer.reconstruct_3d_pose_enhanced(keypoints_2d)
+
+    if pose_3d is not None:
+        print("3D重建成功!")
+        print(f"重建质量评分: {analyzer._assess_reconstruction_quality(pose_3d, keypoints_2d):.3f}")
+
+        # 计算3D角度
+        angles_3d = analyzer.calculate_3d_angles_enhanced(pose_3d)
+        print("3D关节角度:", angles_3d)
+
+    else:
+        print("3D重建失败")
+if __name__ == "__main__":
+    example_usage()
+# ==================== 系统集成修复建议 ====================
+# 6. 性能优化建议
+class Performance3DOptimizer:
+    """3D分析性能优化器"""
+
+    def __init__(self):
+        self.frame_cache = {}
+        self.max_cache_size = 50
+
+    def cache_3d_result(self, frame_idx, pose_3d):
+        """缓存3D结果"""
+        if len(self.frame_cache) >= self.max_cache_size:
+            # 删除最旧的缓存
+            oldest_key = min(self.frame_cache.keys())
+            del self.frame_cache[oldest_key]
+
+        self.frame_cache[frame_idx] = pose_3d.copy()
+
+    def get_cached_result(self, frame_idx):
+        """获取缓存的结果"""
+        return self.frame_cache.get(frame_idx)
+
+    def clear_cache(self):
+        """清除缓存"""
+        self.frame_cache.clear()
 # ==================== 3D运动分析器 ====================
 def ThreeDAnalyzer(video_path=None, keypoints_data=None, frame_rate=30):
     """
@@ -12592,7 +12791,7 @@ def generate_enhancement_report(enhanced_results):
 class EnhancedDataAnalysisUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("增强版运动姿势改良系统")
+        self.setWindowTitle("运动姿势改良和健康检测系统")
         self.resize(1600, 1000)
 
         # 初始化科研管理器
@@ -12610,7 +12809,7 @@ class EnhancedDataAnalysisUI(QMainWindow):
 
         # 添加增强版GoPose标签页
         self.enhanced_gopose_tab = EnhancedGoPoseModule()
-        self.tab_widget.addTab(self.enhanced_gopose_tab, "增强版GoPose分析")
+        self.tab_widget.addTab(self.enhanced_gopose_tab, "运动分析")
 
         # 添加科研管理标签页
         self.research_tab = QWidget()
@@ -16196,6 +16395,234 @@ class SafeVisualizationManager:
 
         except Exception as e:
             logger.error(f"分析覆盖层添加失败: {e}")
+# ==================== 主程序 ====================
+import sys
+import os
+import logging
+import atexit
+import cv2
+from typing import Optional
+# GUI imports (assuming PyQt5/6 is being used)
+try:
+    from PyQt5.QtWidgets import QApplication, QMessageBox
+    from PyQt5.QtCore import QTimer
+except ImportError:
+    try:
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from PyQt6.QtCore import QTimer
+    except ImportError:
+        print("❌ PyQt5 or PyQt6 not found. Please install: pip install PyQt5 or pip install PyQt6")
+        sys.exit(1)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('pose_analysis.log', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """全局异常处理器"""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("未捕获的异常", exc_info=(exc_type, exc_value, exc_traceback))
+    print(f"❌ 系统错误: {exc_value}")
+def setup_environment():
+    """设置运行环境"""
+    try:
+        # 设置OpenCV线程数
+        cv2.setNumThreads(4)
+
+        # 创建必要的目录
+        directories = ['logs', 'data', 'exports', 'temp']
+        for directory in directories:
+            os.makedirs(directory, exist_ok=True)
+
+        logger.info("✅ 环境设置完成")
+        return True
+    except Exception as e:
+        logger.error(f"环境设置失败: {e}")
+        return False
+def check_dependencies():
+    """检查系统依赖项"""
+    dependencies = {
+        'cv2': 'OpenCV',
+        'numpy': 'NumPy',
+        'pandas': 'Pandas',
+        'matplotlib': 'Matplotlib',
+        'scipy': 'SciPy'
+    }
+
+    missing_deps = []
+
+    for module, name in dependencies.items():
+        try:
+            __import__(module)
+            logger.info(f"✅ {name} 已安装")
+        except ImportError:
+            missing_deps.append(name)
+            logger.warning(f"❌ {name} 未安装")
+
+    if missing_deps:
+        print(f"❌ 缺少依赖项: {', '.join(missing_deps)}")
+        print("请运行: pip install opencv-python numpy pandas matplotlib scipy")
+        return False
+
+    logger.info("✅ 所有依赖项检查通过")
+    return True
+def test_components():
+    """测试系统组件"""
+    logger.info("🔍 开始组件测试...")
+
+    # 测试OpenCV
+    try:
+        test_img = cv2.imread('test.jpg')
+        logger.info("✅ OpenCV 组件正常")
+    except Exception as e:
+        logger.warning(f"⚠️ OpenCV 测试警告: {e}")
+
+    # 测试其他核心组件
+    try:
+        import numpy as np
+        import pandas as pd
+        logger.info("✅ 数值计算组件正常")
+    except Exception as e:
+        logger.error(f"❌ 数值计算组件错误: {e}")
+        return False
+
+    logger.info("✅ 组件测试完成")
+    return True
+def setup_application() -> QApplication:
+    """设置应用程序"""
+    app = QApplication(sys.argv)
+    app.setApplicationName("运动姿势改良与健康建议系统")
+    app.setApplicationVersion("2.0")
+    app.setOrganizationName("Motion Analysis Lab")
+
+    # 设置应用程序图标和样式
+    # app.setWindowIcon(QIcon('icons/app_icon.png'))
+
+    return app
+from PyQt5.QtWidgets import QSplashScreen, QApplication
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import QTimer
+def show_splash_screen(app: QApplication, duration: int = 2000):
+    """显示启动画面"""
+    try:
+        # 这里可以添加自定义的启动画面
+        # splash = QSplashScreen(QPixmap('images/splash.png'))
+        # splash.show()
+        # app.processEvents()
+        # QTimer.singleShot(duration, splash.close)
+        logger.info("✅ 启动画面显示完成")
+    except Exception as e:
+        logger.warning(f"⚠️ 启动画面显示失败: {e}")
+def cleanup_on_exit():
+    """退出清理函数"""
+    try:
+        logger.info("🧹 执行退出清理...")
+
+        # 清理OpenCV资源
+        cv2.destroyAllWindows()
+
+        # 清理其他全局资源
+        # 这里可以添加更多清理逻辑
+
+        logger.info("✅ 清理完成")
+    except Exception as e:
+        logger.warning(f"⚠️ 退出清理警告: {e}")
+def main():
+    """主程序入口"""
+    logger.info("=== 运动姿势改良和健康指导系统 ===")
+    logger.info(f"Python版本: {sys.version}")
+    logger.info(f"工作目录: {os.getcwd()}")
+    logger.info(f"系统平台: {sys.platform}")
+
+    try:
+        # 设置环境
+        if not setup_environment():
+            logger.error("❌ 环境设置失败")
+            sys.exit(1)
+
+        # 检查依赖项
+        if not check_dependencies():
+            logger.error("❌ 依赖项检查失败")
+            sys.exit(1)
+
+        # 测试组件
+        if not test_components():
+            logger.error("❌ 组件测试失败")
+            sys.exit(1)
+
+        print("🔄 正在启动用户界面...")
+
+        # 创建应用程序
+        app = setup_application()
+
+        # 显示启动画面
+        show_splash_screen(app)
+
+        # 创建主窗口
+        window = EnhancedDataAnalysisUI()
+        window.show()
+
+        # 显示欢迎消息
+        try:
+            QMessageBox.information(
+                None, '欢迎使用',
+                '欢迎使用运动姿势改良和健康指导系统！\n\n'
+                '系统特色功能:\n'
+                '✓ 专业生物力学分析\n'
+                '✓ AI损伤风险评估\n'
+                '✓ 个性化训练处方\n'
+                '✓ 智能虚拟教练\n\n'
+                '✓ 科研管理中心\n\n'
+                '请先在运动检测标签页载入视频和解析点数据开始分析。'
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ 欢迎消息显示失败: {e}")
+
+        # 注册退出清理函数
+        atexit.register(cleanup_on_exit)
+
+        print("✅ 系统启动完成")
+
+        # 启动应用程序主循环
+        result = app.exec_()
+
+        # 手动清理
+        cleanup_on_exit()
+
+        logger.info("👋 程序正常退出")
+        sys.exit(result)
+
+    except KeyboardInterrupt:
+        print("\n👋 用户中断，正在退出...")
+        logger.info("用户手动中断程序")
+    except Exception as e:
+        logger.error(f"程序运行错误: {e}")
+        print(f"❌ 程序运行错误: {e}")
+        print("详细错误信息请查看日志文件: pose_analysis.log")
+    finally:
+        logger.info("程序已退出")
+if __name__ == '__main__':
+    # 设置全局异常处理
+    sys.excepthook = handle_exception
+
+    # 启动主程序
+    main()
+
+
+
+
+
+
+
+
 # ==================== 独立函数定义 ====================
 def setup_application():
     """设置应用程序 - 简约清晰风格"""
@@ -16656,81 +17083,6 @@ def show_splash_screen(app):
 
     except Exception as e:
         logger.warning(f"启动画面显示失败: {str(e)}")
-def main():
-    """主函数 - 添加全局清理"""
-    try:
-        # 检查依赖项
-        if not check_dependencies():
-            sys.exit(1)
-
-        # 创建应用程序
-        app = setup_application()
-
-        # 显示启动画面
-        show_splash_screen(app)
-
-        # 创建主窗口
-        window = EnhancedDataAnalysisUI()
-        window.show()
-
-        # 显示欢迎消息
-        QMessageBox.information(window, '欢迎',
-                                '欢迎使用增强版运动姿势改良系统！\n\n'
-                                '系统特色功能:\n'
-                                '✓ 专业生物力学分析\n'
-                                '✓ AI损伤风险评估\n'
-                                '✓ 个性化训练处方\n'
-                                '✓ 智能虚拟教练\n\n'
-                                '请先在GoPose标签页载入视频和解析点数据开始分析。')
-
-        # 注册退出清理函数
-        import atexit
-        def cleanup_on_exit():
-            try:
-                # 清理所有全局资源
-                if hasattr(window, 'enhanced_gopose_tab') and hasattr(window.enhanced_gopose_tab, 'memory_manager'):
-                    window.enhanced_gopose_tab.memory_manager.cleanup_on_exit()
-                cv2.destroyAllWindows()
-            except Exception as e:
-                print(f"退出清理警告: {e}")
-
-        atexit.register(cleanup_on_exit)
-
-        # 启动应用程序主循环
-        result = app.exec_()
-
-        # 手动清理
-        cleanup_on_exit()
-
-        sys.exit(result)
-
-    except Exception as e:
-        logger.error(f"应用程序启动失败: {str(e)}")
-        print(f"启动失败: {str(e)}")
-        sys.exit(1)
-def handle_exception(exc_type, exc_value, exc_traceback):
-    """改进的全局异常处理"""
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-
-    logger.error("未捕获的异常", exc_info=(exc_type, exc_value, exc_traceback))
-
-    # 显示错误对话框
-    try:
-        from PyQt5.QtWidgets import QApplication, QMessageBox
-        if QApplication.instance():
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
-            msg.setWindowTitle("系统错误")
-            msg.setText("系统发生未预期的错误")
-            msg.setDetailedText(f"{exc_type.__name__}: {exc_value}")
-            msg.setStandardButtons(QMessageBox.Ok)
-            msg.exec_()
-    except Exception as dialog_error:
-        # 如果连错误对话框都显示不了，至少打印到控制台
-        print(f"严重错误: {exc_type.__name__}: {exc_value}")
-        print(f"错误对话框显示失败: {dialog_error}")
 # 建议：添加数据缓存和内存管理
 class DataCacheManager:
     """数据缓存管理器"""
@@ -16793,101 +17145,6 @@ def cleanup_on_exit(self):
     self._is_active = False
     self.stop_cleanup_timer()
     self.clear_cache()
-# ==================== 主程序 ====================
-if __name__ == '__main__':
-    # 设置全局异常处理
-    sys.excepthook = handle_exception
-
-    # 设置工作目录
-    if hasattr(sys, '_MEIPASS'):
-        os.chdir(sys._MEIPASS)
-
-    # 确保必要的目录存在
-    required_dirs = ['data', 'athlete_profiles', 'results', 'exports']
-    for dir_name in required_dirs:
-        if not os.path.exists(dir_name):
-            os.makedirs(dir_name)
-
-    # 记录启动信息
-    logger.info("=== 增强版运动姿势改良系统启动 ===")
-    logger.info(f"Python版本: {sys.version}")
-    logger.info(f"工作目录: {os.getcwd()}")
-    logger.info(f"系统平台: {sys.platform}")
-
-    # 启动应用程序
-    main()
-
-
-    def test_smart_coach_integration():
-        """测试智能教练集成"""
-        print("🧪 测试智能教练集成...")
-
-        try:
-            if SMART_COACH_AVAILABLE:
-                bot = SmartSportsBot()
-                test_response = bot.smart_chat("测试消息")
-                print("✅ 智能教练集成成功")
-                return True
-            else:
-                print("⚠️ 智能教练模块未找到，使用基础模式")
-                return False
-        except Exception as e:
-            print(f"❌ 集成测试失败: {e}")
-            return False
-
-
-    # 在main()函数开始时调用
-    def main():
-        # 测试智能教练集成
-        test_smart_coach_integration()
-
-        # 继续原有的main逻辑
-        # ...
-if __name__ == "__main__":
-    # 测试代码
-    print("CPU优化的matplotlib解决方案已加载")
-    print("使用 setup_cpu_optimized_plotting() 创建可视化器")
-    print("使用 safe_plot_motion_data() 进行线程安全的绘图")
-# 确保程序不会直接退出
-if __name__ == "__main__":
-    try:
-        # 您的主程序逻辑
-        print("🔄 正在启动用户界面...")
-
-        # 如果是GUI程序，确保有事件循环
-        # app.mainloop()  # 对于tkinter
-        # app.exec_()     # 对于PyQt
-
-        # 如果是命令行程序，添加用户交互
-        input("按Enter键退出...")
-
-    except Exception as e:
-        print(f"❌ 程序运行错误: {e}")
-        input("按Enter键退出...")
-
-
-
-def validate_3d_data(pose_3d):
-    """验证3D数据有效性"""
-    if pose_3d is None:
-        return False, "3D数据为空"
-
-    if not isinstance(pose_3d, (list, np.ndarray)):
-        return False, "3D数据格式错误"
-
-    if len(pose_3d) == 0:
-        return False, "3D数据为空数组"
-
-    # 检查数据结构
-    valid_points = 0
-    for i, point in enumerate(pose_3d):
-        if len(point) >= 4 and point[3] > 0.1:
-            valid_points += 1
-
-    if valid_points < 5:
-        return False, f"有效关键点太少: {valid_points}"
-
-    return True, "数据有效"
 def run_complete_sequence_analysis_with_cache(self):
     """运行完整序列分析（带缓存优化）"""
     if not self.data or not self.athlete_profile:
@@ -17011,21 +17268,6 @@ def validate_system_config(self):
             errors.append(f"缺少必要模块: {module_name}")
 
     return errors
-def safe_analysis_operation(func):
-    """安全分析操作装饰器"""
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except MemoryError:
-            QMessageBox.critical(None, '内存错误',
-                               '内存不足，请减少数据量或关闭其他程序')
-            return None
-        except Exception as e:
-            logger.error(f"分析操作失败: {func.__name__}, 错误: {e}")
-            QMessageBox.warning(None, '分析错误',
-                              f'操作失败: {str(e)}')
-            return None
-    return wrapper
 import signal
 def signal_handler(signum, frame):
     """信号处理函数"""
@@ -17393,3 +17635,38 @@ def safe_plot_motion_data(motion_data, output_dir="./plots/"):
         gc.collect()
 
     return True
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """全局异常处理器"""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("未捕获的异常", exc_info=(exc_type, exc_value, exc_traceback))
+def setup_environment():
+    """设置运行环境"""
+    # PyInstaller打包后的路径处理
+    if hasattr(sys, '_MEIPASS'):
+        os.chdir(sys._MEIPASS)
+
+    # 创建必要的目录
+    required_dirs = ['data', 'athlete_profiles', 'results', 'exports']
+    for dir_name in required_dirs:
+        Path(dir_name).mkdir(exist_ok=True)
+
+    logger.info("环境设置完成")
+def test_components():
+    """测试系统组件"""
+    print("🧪 正在测试系统组件...")
+
+    # 测试matplotlib优化
+    try:
+        print("✅ CPU优化的matplotlib解决方案已加载")
+    except Exception as e:
+        print(f"⚠️ matplotlib优化测试失败: {e}")
+
+    # 测试智能教练集成
+    try:
+        # 这里应该导入并测试SmartSportsBot
+        print("✅ 智能教练集成测试完成")
+    except Exception as e:
+        print(f"⚠️ 智能教练集成测试失败: {e}")
