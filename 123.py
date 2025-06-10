@@ -1,16 +1,17 @@
+#导入所有的内容导入
 import queue
+import sqlite3
+import json
+import numpy as np
 import sys
 import os
 import pickle
 import csv
-import json
 import functools
 import warnings
 from datetime import datetime, timedelta
-
 from improved_deepseek_sports import SmartSportsBot  # 替换为实际的模块路径
 import threading
-
 def check_smart_coach_availability(self):
     """检查智能教练可用性"""
 
@@ -28,7 +29,6 @@ def check_smart_coach_availability(self):
             self.smart_coach_status = "❌ 教练初始化失败"
 
     threading.Thread(target=check_async, daemon=True).start()
-
 # 统一导入PyQt5组件
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout,
@@ -44,18 +44,12 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QDir, QSize
 from PyQt5.QtGui import QIcon, QFont, QColor, QTextCharFormat, QTextCursor, QImage, QPixmap, QPalette
-
 # 数据处理和分析
-import numpy as np
-import pandas as pd
-import sqlite3
 import logging
 import locale
-
 # 设置警告过滤和编码
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 locale.setlocale(locale.LC_ALL, 'zh_CN.UTF-8')
-
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -66,8 +60,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("EnhancedSportsAnalysis")
-
-
 def check_and_setup_matplotlib():
     """检查并设置matplotlib"""
     try:
@@ -90,12 +82,8 @@ def check_and_setup_matplotlib():
     except Exception as e:
         logger.error(f"matplotlib配置失败: {e}")
         return False, None, None
-
-
 # 全局matplotlib配置
 MATPLOTLIB_AVAILABLE, FigureCanvas, Figure = check_and_setup_matplotlib()
-
-
 def safe_import_modules():
     """安全导入可选模块"""
     modules = {}
@@ -122,12 +110,8 @@ def safe_import_modules():
         modules['smart_coach'] = None
 
     return modules
-
-
 # 导入可选模块
 OPTIONAL_MODULES = safe_import_modules()
-
-
 def safe_operation(operation_name="操作"):
     """安全操作装饰器"""
 
@@ -149,8 +133,7 @@ def safe_operation(operation_name="操作"):
         return wrapper
 
     return decorator
-
-
+## 配置与系统管理
 class ConfigManager:
     """配置管理器"""
 
@@ -241,8 +224,34 @@ class ConfigManager:
                 config[key] = {}
             config = config[key]
         config[keys[-1]] = value
+class SystemConfig:
+    """系统配置管理"""
 
+    def __init__(self):
+        self.config_file = "config.json"
+        self.default_config = {
+            "analysis": {
+                "confidence_threshold": 0.3,
+                "smoothing_window": 5,
+                "fps_rate": 30
+            },
+            "ai_coach": {
+                "model_path": "models/coach_model.pkl",
+                "max_tokens": 1000
+            },
+            "visualization": {
+                "chart_style": "modern",
+                "color_scheme": "professional"
+            }
+        }
 
+    def load_config(self):
+        """载入配置"""
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return self.default_config
 def safe_array_check(arr, condition_func):
     """安全的数组条件检查"""
     try:
@@ -261,8 +270,6 @@ def safe_array_check(arr, condition_func):
     except Exception as e:
         logger.warning(f"数组检查失败: {e}")
         return False
-
-
 class DatabaseManager:
     """数据库管理器"""
 
@@ -334,8 +341,6 @@ class DatabaseManager:
                     'analysis_data': json.loads(analysis_data)
                 })
             return results
-
-
 class SequenceAnalysisManager:
     """序列分析管理器 - 收集和管理完整运动序列数据"""
 
@@ -710,12 +715,8 @@ class SequenceAnalysisManager:
             json.dump(export_data, f, indent=2, ensure_ascii=False)
 
         logger.info(f"分析结果已导出到: {filepath}")
-
-
 # 全局配置管理器实例
 CONFIG_MANAGER = ConfigManager()
-
-
 # 使用示例和工具函数
 def create_sample_analysis_data():
     """创建示例分析数据用于测试"""
@@ -735,8 +736,6 @@ def create_sample_analysis_data():
             for _ in range(17)  # 假设有17个关键点
         ]
     }
-
-
 if __name__ == "__main__":
     # 测试代码
     print("体育分析应用 - 改进版")
@@ -759,23 +758,51 @@ if __name__ == "__main__":
     print(f"质量得分: {summary['movement_quality']['quality_score']:.2f}")
     print(f"稳定性: {summary['stability_metrics'].get('overall_stability', 0):.2f}")
     print(f"建议: {summary['recommendations']}")
-# ==================== 789.py的核心类集成 ====================
-# 添加以下导入
-import torch
-import torch.nn as nn
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.cluster import KMeans
-from scipy import signal
 from scipy.stats import pearsonr
-from mpl_toolkits.mplot3d import Axes3D
-import numpy as np
 import sqlite3
-import logging
 import multiprocessing as mp
 from numba import jit
-import matplotlib.pyplot as plt
-from typing import List, Tuple, Dict, Any
+from typing import Dict, List, Tuple, Optional, Any
+from dataclasses import dataclass
+from scipy.optimize import minimize
+import math
+import time
+import psutil
+from collections import OrderedDict
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QTimer
+import logging
+logger = logging.getLogger(__name__)
+import numpy as np
+import pandas as pd
+import warnings
+warnings.filterwarnings('ignore')
+import numpy as np
 import cv2
+from scipy import signal
+from scipy.spatial.distance import euclidean
+from sklearn.preprocessing import StandardScaler
+import json
+from datetime import datetime
+import logging
+from collections import deque
+import warnings
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+# 设置日志
+logger = logging.getLogger(__name__)
+# 忽略一些常见的警告
+warnings.filterwarnings('ignore', category=RuntimeWarning)
+warnings.filterwarnings('ignore', category=np.RankWarning)
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import gc
+import threading
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
+import weakref
+from collections import defaultdict
+# ==================== 789.py的核心类集成 ====================
 
 def check_matplotlib():
     """检查matplotlib是否可用"""
@@ -786,9 +813,9 @@ def check_matplotlib():
     except ImportError:
         return False
 
-    # 在文件开头添加UI设计常量
+# 在文件开头添加UI设计常量
 
-    class UIColors:
+class UIColors:
         """现代简约UI颜色方案"""
         # 主色调
         PRIMARY = "#0d6efd"
@@ -825,7 +852,7 @@ def check_matplotlib():
         BORDER_LIGHT = "#dee2e6"
         BORDER_FOCUS = "#86b7fe"
 
-    class UISpacing:
+class UISpacing:
         """间距常量"""
         XS = 4
         SM = 8
@@ -858,8 +885,8 @@ def check_matplotlib():
             WEIGHT_BOLD = 700
 
     # 性能优化模块
-    @jit(nopython=True)
-    def fast_angle_calculation(p1, p2, p3):
+@jit(nopython=True)
+def fast_angle_calculation(p1, p2, p3):
         """JIT编译的快速角度计算"""
         v1 = p1 - p2
         v2 = p3 - p2
@@ -868,7 +895,7 @@ def check_matplotlib():
         cos_angle = dot_product / (norms + 1e-8)
         return np.arccos(np.clip(cos_angle, -1.0, 1.0))
 
-    class OptimizedCalculationModule:
+class OptimizedCalculationModule:
         """优化的计算模块"""
 
         @staticmethod
@@ -882,7 +909,7 @@ def check_matplotlib():
                 logger.error(f"并行分析错误: {e}")
                 return []
 
-    class AdvancedDataManager:
+class AdvancedDataManager:
         """高级数据管理"""
 
         def __init__(self, db_path="enhanced_sports_analysis.db"):
@@ -917,7 +944,7 @@ def check_matplotlib():
             except Exception as e:
                 logger.error(f"数据库初始化错误: {e}")
 
-    class SportsAnalysisEngine:
+class SportsAnalysisEngine:
         """运动分析引擎 - 修复版本"""
 
         def __init__(self):
@@ -1128,7 +1155,7 @@ def check_matplotlib():
                 logger.error(f"疲劳检测错误: {e}")
                 return {"fatigue_level": 0.0, "trend": "stable", "error": str(e)}
 
-    class SafePlotManager:
+class SafePlotManager:
         """安全的图表管理器"""
 
         def __init__(self):
@@ -1165,8 +1192,7 @@ def check_matplotlib():
                 logger.info("所有图表已关闭")
             except Exception as e:
                 logger.error(f"关闭图表错误: {e}")
-
-    def extract_fatigue_features(self, sequence):
+def extract_fatigue_features(self, sequence):
         """提取疲劳相关特征"""
         features = []
         for frame in sequence:
@@ -1176,18 +1202,7 @@ def check_matplotlib():
                 features.append(amplitude)
         return features
 
-
 # ==================== 修复后的ar运动实时分析指导 ====================
-import cv2
-import numpy as np
-import json
-import threading
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass
-from collections import deque
-import logging
-
-
 @dataclass
 class StandardPose:
     """标准姿势数据结构"""
@@ -1196,8 +1211,6 @@ class StandardPose:
     keypoints: List[Tuple[float, float]]
     angles: Dict[str, float]
     metadata: Dict[str, Any]
-
-
 @dataclass
 class JointError:
     """关节错误信息"""
@@ -1206,9 +1219,7 @@ class JointError:
     target_angle: float
     error_magnitude: float
     correction_direction: str
-
 import logging
-
 class ARRealTimeGuidance:
     """改进的AR增强现实指导系统"""
 
@@ -1569,20 +1580,6 @@ class ARRealTimeGuidance:
             'frame_skip_count': self.frame_skip_count
         }
 # ==================== 修复后的3D运动分析模块 ====================
-import numpy as np
-import math
-import cv2
-from scipy.spatial.distance import cdist
-from scipy.optimize import minimize
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import numpy as np
-import math
-from scipy.spatial.distance import cdist
-from scipy.optimize import least_squares
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
 class Enhanced3DAnalyzer:
     """增强版3D运动分析器 - 修复版"""
 
@@ -2547,8 +2544,6 @@ class Enhanced3DAnalyzer:
         except Exception as e:
             print(f"身高估算错误: {e}")
             return 400
-
-
 # ==================== 修复后的3D可视化组件 ====================
 class Fixed3DVisualizationWidget(QWidget):
     """修复后的3D可视化组件"""
@@ -2749,8 +2744,6 @@ class Fixed3DVisualizationWidget(QWidget):
         self.ax_side.view_init(elev=0, azim=90)
         self.ax_top.view_init(elev=90, azim=0)
         self.canvas.draw()
-
-
 # ==================== 使用示例 ====================
 def example_usage():
     """使用示例"""
@@ -2779,15 +2772,10 @@ def example_usage():
 
     else:
         print("3D重建失败")
-
-
 if __name__ == "__main__":
     example_usage()
-
-
 # ==================== 步骤3: UI集成修改 ====================
 # 在EnhancedGoPoseModule类中添加以下修改：
-
 def setup_tree_widget_with_3d(self):
     """设置树形控件（包含3D分析）"""
     # 运动员档案
@@ -2849,8 +2837,6 @@ def setup_tree_widget_with_3d(self):
     history_item = QTreeWidgetItem(self.treeWidget)
     history_item.setText(0, "历史数据分析")
     history_item.setCheckState(0, Qt.Unchecked)
-
-
 def treeClicked_with_3d(self):
     """树形控件点击事件（包含3D处理）"""
     try:
@@ -2893,10 +2879,7 @@ def treeClicked_with_3d(self):
 
     except Exception as e:
         QMessageBox.warning(self, '管理器错误', str(e))
-
-
 # ==================== 系统集成修复建议 ====================
-
 def show_3d_analysis(self):
     """显示3D运动分析 - 完整实现"""
     self.tableWidget.clear()
@@ -2975,8 +2958,6 @@ def show_3d_analysis(self):
         self.tableWidget.insertRow(0)
         self.tableWidget.setItem(0, 0, QTableWidgetItem('3D分析错误'))
         self.tableWidget.setItem(0, 1, QTableWidgetItem(str(e)))
-
-
 def _estimate_height_from_keypoints(self, keypoints):
     """估算身高像素值"""
     try:
@@ -3008,7 +2989,6 @@ def _estimate_height_from_keypoints(self, keypoints):
     except Exception as e:
         print(f"身高估算错误: {e}")
         return 400
-
 def open_3d_viewer(self, pose_3d):
     """打开3D可视化窗口"""
     try:
@@ -3039,8 +3019,6 @@ def open_3d_viewer(self, pose_3d):
         print(f"3D视图详细错误: {e}")
         import traceback
         traceback.print_exc()
-
-
 # 3. 添加数据保存和导出功能
 def save_3d_frame(self, pose_3d):
     """保存3D帧数据"""
@@ -3067,8 +3045,6 @@ def save_3d_frame(self, pose_3d):
 
     except Exception as e:
         QMessageBox.warning(self, '错误', f'保存失败: {str(e)}')
-
-
 def export_3d_sequence(self):
     """导出3D序列数据"""
     try:
@@ -3097,8 +3073,6 @@ def export_3d_sequence(self):
 
     except Exception as e:
         QMessageBox.warning(self, '错误', f'导出失败: {str(e)}')
-
-
 # 4. 添加相机参数设置功能
 def setup_camera_parameters(self):
     """设置相机参数"""
@@ -3137,23 +3111,16 @@ def setup_camera_parameters(self):
             'principal_point': (cx_spin.value(), cy_spin.value())
         }
         QMessageBox.information(self, '成功', '相机参数已更新')
-
-
 # 5. 错误处理和日志改进
 import logging
-
 # 设置3D分析专用日志
 logger_3d = logging.getLogger('3D_Analysis')
 logger_3d.setLevel(logging.INFO)
-
-
 def log_3d_analysis_error(error_msg, exception=None):
     """记录3D分析错误"""
     logger_3d.error(f"3D分析错误: {error_msg}")
     if exception:
         logger_3d.exception("详细错误信息:")
-
-
 def validate_3d_data(pose_3d):
     """验证3D数据有效性"""
     if pose_3d is None:
@@ -3170,8 +3137,6 @@ def validate_3d_data(pose_3d):
         return False, f"有效关键点太少: {valid_points}"
 
     return True, "数据有效"
-
-
 # 6. 性能优化建议
 class Performance3DOptimizer:
     """3D分析性能优化器"""
@@ -3196,8 +3161,6 @@ class Performance3DOptimizer:
     def clear_cache(self):
         """清除缓存"""
         self.frame_cache.clear()
-
-
 # 7. 集成测试函数
 def test_3d_integration():
     """测试3D集成功能"""
@@ -3232,12 +3195,9 @@ def test_3d_integration():
     except Exception as e:
         print(f"❌ 3D集成测试异常: {e}")
         return False
-
-
 if __name__ == "__main__":
     # 运行集成测试
     test_3d_integration()
-
 # ==================== 3. 高级生物力学模块 ====================
 class AdvancedBiomechanics:
     """高级生物力学分析器"""
@@ -3438,8 +3398,6 @@ class AdvancedBiomechanics:
             print(f"高级力矩计算错误: {e}")
 
         return torques
-
-
 # ==================== 4. 运动专项化分析模块 ====================
 class SportSpecificAnalyzer:
     """运动专项化分析器"""
@@ -3845,8 +3803,6 @@ class SportSpecificAnalyzer:
             print(f"建议生成错误: {e}")
 
         return recommendations
-
-
 # ==================== 5. 疲劳与恢复分析模块 ====================
 class FatigueRecoveryAnalyzer:
     """疲劳与恢复分析器"""
@@ -4257,8 +4213,6 @@ class FatigueRecoveryAnalyzer:
             ])
 
         return recommendations
-
-
 # ==================== 6. 科研数据管理模块 ====================
 class ResearchDataManager:
     """科研数据管理器"""
@@ -4790,8 +4744,6 @@ class ResearchDataManager:
             csv_data.append(row)
 
         return pd.DataFrame(csv_data)
-
-
 # ==================== 主界面增强类 ====================
 class EnhancedMainWindow(QMainWindow):
     """增强版主窗口"""
@@ -5321,8 +5273,6 @@ class EnhancedMainWindow(QMainWindow):
             QMessageBox.information(self, '成功', '配置已保存')
         except Exception as e:
             QMessageBox.warning(self, '错误', f'配置保存失败: {str(e)}')
-
-
 # ==================== 7. 数据可视化窗口 ====================
 class VisualizationWindow(QMainWindow):
     """数据可视化窗口"""
@@ -5737,8 +5687,6 @@ class VisualizationWindow(QMainWindow):
                     QMessageBox.warning(self, '错误', '没有可导出的图表')
             except Exception as e:
                 QMessageBox.warning(self, '错误', f'导出失败: {str(e)}')
-
-
 # ==================== 8. 实时分析模块 ====================
 class RealTimeAnalyzer:
     """实时分析器"""
@@ -5941,8 +5889,6 @@ class RealTimeAnalyzer:
             return np.degrees(angle)
         except:
             return 0
-
-
 # ==================== 9. 多模态数据融合模块 ====================
 class MultiModalDataFusion:
     """多模态数据融合器"""
@@ -6401,7 +6347,6 @@ class MultiModalDataFusion:
         # 简化的神经网络融合
         # 实际应用中需要训练好的融合网络
         return self.weighted_average_fusion(windowed_data)
-
 # ==================== 生物力学特征提取模块 ====================
 class BiomechanicsAnalyzer:
     """生物力学特征分析器"""
@@ -6610,8 +6555,6 @@ class BiomechanicsAnalyzer:
             logger.error(f"地面反作用力估算错误: {str(e)}")
 
         return 0
-
-
 # ==================== 运动表现评分系统 ====================
 class PerformanceScoreSystem:
     """运动表现评分系统"""
@@ -6786,8 +6729,6 @@ class PerformanceScoreSystem:
             recommendations.append("表现优秀，继续保持！")
 
         return recommendations
-
-
 # ==================== 标准动作对比功能 ====================
 class StandardComparisonModule:
     """标准动作对比模块"""
@@ -6944,8 +6885,6 @@ class StandardComparisonModule:
     def get_available_exercises(self):
         """获取可用的标准动作列表"""
         return list(self.standard_templates.keys())
-
-
 # ==================== 历史数据分析和进步追踪 ====================
 class ProgressTrackingModule:
     """进步追踪模块"""
@@ -7175,8 +7114,6 @@ class ProgressTrackingModule:
         except Exception as e:
             logger.error(f"预测趋势错误: {str(e)}")
             return {'prediction': '预测失败', 'confidence': 0, 'trend': 'unknown'}
-
-
 # ==================== 数据可视化仪表板 ====================
 class DashboardModule:
     """数据可视化仪表板"""
@@ -7314,7 +7251,6 @@ class DashboardModule:
         summary_html += "</div>"
 
         return summary_html
-
 # ==================== 损伤风险预测模块 ====================
 class InjuryRiskPredictor:
     """损伤风险预测器"""
@@ -7464,8 +7400,6 @@ class InjuryRiskPredictor:
             logger.error(f"脊柱排列评估错误: {str(e)}")
 
         return 0
-
-
 # ==================== 个性化训练处方生成器 ====================
 class TrainingPrescriptionGenerator:
     """个性化训练处方生成器"""
@@ -7581,8 +7515,6 @@ class TrainingPrescriptionGenerator:
             logger.error(f"训练处方生成错误: {str(e)}")
 
         return prescription
-
-
 # ==================== 增强计算模块 ====================
 class EnhancedCalculationModule:
     """增强版计算模块，整合生物力学和AI分析"""
@@ -7787,8 +7719,6 @@ class EnhancedCalculationModule:
                 cv2.circle(frame, (int(x), int(y)), size * 2, (0, 255, 0), -1)
                 cv2.putText(frame, str(i), (int(x) + 10, int(y)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-
-
 # ==================== 运动员档案管理器 ====================
 class AthleteProfileManager:
     """运动员档案管理器"""
@@ -7841,12 +7771,7 @@ class AthleteProfileManager:
                 except:
                     continue
         return profiles
-
-
 # ==================== AI虚拟教练 ====================
-from PyQt5.QtCore import QThread, pyqtSignal
-
-
 class SmartCoachWorker(QThread):
     """智能教练工作线程"""
     response_ready = pyqtSignal(str, str)  # response, error
@@ -7869,8 +7794,6 @@ class SmartCoachWorker(QThread):
 
         except Exception as e:
             self.response_ready.emit("", str(e))
-
-
 # 在AICoachDialog类中修改generate_smart_response方法：
 def generate_smart_response(self, user_message):
     """使用智能运动教练生成回复"""
@@ -7888,7 +7811,6 @@ def generate_smart_response(self, user_message):
     self.worker = SmartCoachWorker(self.smart_coach, user_message, user_level, context)
     self.worker.response_ready.connect(self.handle_smart_response)
     self.worker.start()
-
 def handle_smart_response(self, response, error):
     """处理智能教练回复"""
     if error:
@@ -7902,10 +7824,8 @@ def handle_smart_response(self, response, error):
     self.is_responding = False
     self.send_button.setText("发送")
     self.send_button.setEnabled(True)
-
 SMART_COACH_AVAILABLE = True  # 或根据实际情况设置
 SMART_COACH = None  # 或设置为实际的智能教练对象
-
 def init_smart_coach_safe(self):
     """安全初始化智能教练"""
     try:
@@ -8846,7 +8766,6 @@ class AICoachDialog(QDialog):
         else:
             response = self.get_improvement_suggestions()
             self.add_coach_message(response)
-
 # ==================== 对话框类 ====================
 class Dialog(QDialog):
     def __init__(self, parent=None):
@@ -8877,8 +8796,6 @@ class Dialog(QDialog):
         if result == QDialog.Accepted:
             return 1 if dialog.radio2.isChecked() else 0, True
         return 0, False
-
-
 # ==================== 运动员档案对话框 ====================
 class AthleteProfileDialog(QDialog):
     """运动员档案设置对话框"""
@@ -9038,8 +8955,6 @@ class AthleteProfileDialog(QDialog):
                 QMessageBox.information(self, '成功', '档案载入成功')
             except Exception as e:
                 QMessageBox.warning(self, '错误', str(e))
-
-
 # ==================== MyLabel 类 ====================
 class MyLabel(QLabel):
     def __init__(self, parent=None):
@@ -9062,21 +8977,6 @@ class MyLabel(QLabel):
 
     def connect_customized_slot(self, slot):
         self.customized_slots.append(slot)
-
-
-
-
-import time
-import threading
-import psutil
-import gc
-from collections import OrderedDict
-from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QTimer
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 class MemoryManager:
     """增强版内存管理器 - 完整修复版"""
 
@@ -9088,6 +8988,9 @@ class MemoryManager:
         self._access_times = {}
         self._lock = threading.Lock()
         self._is_active = True
+        self._cache = {}
+        self._running = True
+        self._timer = None
 
         # 修复定时器初始化
         self.cleanup_timer = None
@@ -9297,8 +9200,6 @@ class MemoryManager:
                 logger.warning(f"停止定时器时出现异常: {e}")
             finally:
                 self.cleanup_timer = None
-
-
 def cache_frame_analysis(self, frame_idx, analysis_result):
     """缓存帧分析结果（线程安全）"""
     if not self._is_active:
@@ -9328,8 +9229,6 @@ def cache_frame_analysis(self, frame_idx, analysis_result):
 
         except Exception as e:
             logger.error(f"缓存帧分析结果失败: {e}")
-
-
 def get_cached_analysis(self, frame_idx):
     """获取缓存的分析结果"""
     if not self._is_active:
@@ -9349,8 +9248,6 @@ def get_cached_analysis(self, frame_idx):
         except Exception as e:
             logger.error(f"获取缓存分析失败: {e}")
             return None
-
-
 def get_cache_stats(self):
     """获取缓存统计信息"""
     return {
@@ -9365,8 +9262,6 @@ def get_cache_stats(self):
         'cleanup_count': self.memory_stats['cleanup_count'],
         'peak_memory_usage': self.memory_stats['peak_usage']
     }
-
-
 def clear_cache(self):
     """清除所有缓存"""
     with self._lock:
@@ -9375,8 +9270,6 @@ def clear_cache(self):
         self._access_times.clear()
     gc.collect()
     logger.info("所有缓存已清除")
-
-
 def __del__(self):
     """安全的析构函数"""
     try:
@@ -9384,8 +9277,6 @@ def __del__(self):
     except Exception as e:
         # 使用标准错误输出，避免logging问题
         print(f"内存管理器析构警告: {e}")
-
-
 class AsyncAnalysisWorker(QThread):
     """异步分析工作器"""
     progress_updated = pyqtSignal(int)  # 进度更新信号
@@ -9571,8 +9462,6 @@ class AsyncAnalysisWorker(QThread):
         except Exception as e:
             logger.error(f"生成摘要失败: {e}")
             return {'error': str(e)}
-
-
 # 使用示例
 class AnalysisManager:
     """分析管理器示例"""
@@ -11772,8 +11661,6 @@ class EnhancedGoPoseModule(QWidget):
                     QMessageBox.information(self, '成功', '运动学参数已导出')
                 except Exception as e:
                     QMessageBox.warning(self, '错误', f'导出失败: {str(e)}')
-
-
 # ==================== OpenPose 分析函数 ====================
 def analysis(video, cut1, cut2, zone=0):
     """OpenPose视频分析函数"""
@@ -11860,24 +11747,7 @@ def analysis(video, cut1, cut2, zone=0):
         pickle.dump(data_list, file0)
 
     return pkl_path
-
-
-# ==================== 主程序 ====================
-
-import numpy as np
-import cv2
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import pandas as pd
-from scipy import signal
-from scipy.spatial.distance import euclidean
-import warnings
-
-warnings.filterwarnings('ignore')
-
-
 # ==================== 3D运动分析器 ====================
-
 def ThreeDAnalyzer(video_path=None, keypoints_data=None, frame_rate=30):
     """
     3D运动分析器
@@ -11927,8 +11797,6 @@ def ThreeDAnalyzer(video_path=None, keypoints_data=None, frame_rate=30):
 
     print("✓ 3D运动分析完成")
     return analysis_results
-
-
 def extract_keypoints_from_video(video_path):
     """从视频中提取关键点 (模拟数据)"""
     # 模拟关键点数据 - 实际应用中可使用OpenPose, MediaPipe等
@@ -11946,8 +11814,6 @@ def extract_keypoints_from_video(video_path):
         keypoints[:, i, 2] = 50 + 20 * np.sin(2 * t + i * 0.1)  # z (深度)
 
     return keypoints
-
-
 def reconstruct_3d_coordinates(keypoints_2d):
     """3D坐标重建"""
     # 简化的3D重建 - 实际应用中需要相机标定和立体视觉
@@ -11960,14 +11826,10 @@ def reconstruct_3d_coordinates(keypoints_2d):
             coords_3d[frame, point] = optimize_3d_point(coords_3d[frame, point])
 
     return coords_3d
-
-
 def optimize_3d_point(point):
     """优化3D点坐标"""
     # 简单的噪声过滤
     return point + np.random.normal(0, 0.1, 3)
-
-
 def analyze_trajectory(coords_3d, frame_rate):
     """分析运动轨迹"""
     n_frames, n_keypoints, _ = coords_3d.shape
@@ -11999,23 +11861,17 @@ def analyze_trajectory(coords_3d, frame_rate):
         trajectory_metrics['direction_changes'].append(direction_changes)
 
     return trajectory_metrics
-
-
 def calculate_path_length(trajectory):
     """计算路径长度"""
     distances = [euclidean(trajectory[i], trajectory[i + 1])
                  for i in range(len(trajectory) - 1)]
     return sum(distances)
-
-
 def calculate_smoothness(trajectory):
     """计算轨迹平滑度"""
     # 使用二阶导数的方差来衡量平滑度
     diff2 = np.diff(trajectory, n=2, axis=0)
     smoothness = np.mean(np.var(diff2, axis=0))
     return smoothness
-
-
 def count_direction_changes(trajectory):
     """计算方向变化次数"""
     velocities = np.diff(trajectory, axis=0)
@@ -12026,8 +11882,6 @@ def count_direction_changes(trajectory):
             direction_changes += 1
 
     return direction_changes
-
-
 def calculate_kinematics(coords_3d, frame_rate):
     """计算运动学参数"""
     dt = 1.0 / frame_rate
@@ -12057,8 +11911,6 @@ def calculate_kinematics(coords_3d, frame_rate):
     }
 
     return kinematics
-
-
 def identify_motion_patterns(coords_3d, kinematics):
     """识别运动模式"""
     patterns = {
@@ -12091,8 +11943,6 @@ def identify_motion_patterns(coords_3d, kinematics):
         patterns['movement_efficiency'].append(efficiency)
 
     return patterns
-
-
 def classify_motion_type(speed_profile):
     """分类运动类型"""
     speed_var = np.var(speed_profile)
@@ -12104,8 +11954,6 @@ def classify_motion_type(speed_profile):
         return "rhythmic"
     else:
         return "irregular"
-
-
 def analyze_periodicity(position_profile):
     """分析周期性"""
     # 使用FFT分析周期性
@@ -12117,15 +11965,11 @@ def analyze_periodicity(position_profile):
     periodicity_strength = np.abs(fft_result[dominant_freq_idx]) / np.sum(np.abs(fft_result))
 
     return periodicity_strength
-
-
 def find_dominant_frequency(speed_profile):
     """找到主导频率"""
     frequencies, power = signal.periodogram(speed_profile)
     dominant_freq_idx = np.argmax(power[1:]) + 1
     return frequencies[dominant_freq_idx]
-
-
 def calculate_movement_efficiency(position_profile, speed_profile):
     """计算运动效率"""
     # 效率 = 直线距离 / 实际路径长度
@@ -12138,8 +11982,6 @@ def calculate_movement_efficiency(position_profile, speed_profile):
         efficiency = 0
 
     return efficiency
-
-
 def generate_3d_visualization(coords_3d, trajectory_analysis):
     """生成3D可视化"""
     fig = plt.figure(figsize=(12, 8))
@@ -12168,8 +12010,6 @@ def generate_3d_visualization(coords_3d, trajectory_analysis):
 
     plt.tight_layout()
     plt.show()
-
-
 def assess_motion_quality(coords_3d, kinematics):
     """评估运动质量"""
     quality_metrics = {
@@ -12201,10 +12041,7 @@ def assess_motion_quality(coords_3d, kinematics):
         quality_metrics['overall_score'].append(overall)
 
     return quality_metrics
-
-
 # ==================== 深度学习增强器 ====================
-# 保持原来的函数不变，添加一个包装类
 # 保持原来的函数不变，添加一个包装类
 class DeepLearningEnhancerWrapper:
     """
@@ -12244,8 +12081,6 @@ class DeepLearningEnhancerWrapper:
         if self.motion_data is None:
             raise ValueError("请先设置运动数据或在调用时提供数据")
         return DeepLearningEnhancer(self.motion_data, enhancement_type)
-
-
 # 修复后的主函数 - 只保留一个定义，支持可选参数
 def DeepLearningEnhancer(motion_data=None, enhancement_type='noise_reduction'):
     """
@@ -12289,8 +12124,6 @@ def DeepLearningEnhancer(motion_data=None, enhancement_type='noise_reduction'):
 
     print(f"✓ 深度学习增强完成 (类型: {enhancement_type})")
     return enhanced_results
-
-
 def apply_noise_reduction(motion_data):
     """应用噪声减少算法"""
     print("- 执行噪声减少...")
@@ -12312,8 +12145,6 @@ def apply_noise_reduction(motion_data):
         'enhanced_kinematics': enhanced_kinematics,
         'noise_reduction_ratio': calculate_noise_reduction_ratio(coords_3d, smoothed_coords)
     }
-
-
 def denoise_with_autoencoder(coords_3d):
     """使用自编码器概念进行去噪 (简化版本)"""
     # 简化的自编码器逻辑
@@ -12352,8 +12183,6 @@ def denoise_with_autoencoder(coords_3d):
         decoded[:, keypoint, :] = reconstructed
 
     return decoded
-
-
 def apply_kalman_filter(coords_3d):
     """应用卡尔曼滤波"""
     n_frames, n_keypoints, n_dims = coords_3d.shape
@@ -12367,8 +12196,6 @@ def apply_kalman_filter(coords_3d):
             filtered_coords[:, keypoint, dim] = filtered_signal
 
     return filtered_coords
-
-
 def simple_kalman_filter(signal_data, process_noise=0.01, measurement_noise=0.1):
     """简化的卡尔曼滤波器"""
     n = len(signal_data)
@@ -12391,8 +12218,6 @@ def simple_kalman_filter(signal_data, process_noise=0.01, measurement_noise=0.1)
         filtered_signal[i] = x_est
 
     return filtered_signal
-
-
 def calculate_noise_reduction_ratio(original, enhanced):
     """计算噪声减少比例"""
     original_variance = np.var(original)
@@ -12404,8 +12229,6 @@ def calculate_noise_reduction_ratio(original, enhanced):
         reduction_ratio = 0
 
     return max(0, reduction_ratio)
-
-
 def predict_future_motion(motion_data):
     """预测未来运动"""
     print("- 执行运动预测...")
@@ -12426,8 +12249,6 @@ def predict_future_motion(motion_data):
         'predicted_kinematics': predicted_kinematics,
         'prediction_confidence': calculate_prediction_confidence(coords_3d, predicted_coords)
     }
-
-
 def lstm_prediction(coords_3d, future_frames):
     """使用LSTM概念进行预测 (简化版本)"""
     n_frames, n_keypoints, n_dims = coords_3d.shape
@@ -12450,8 +12271,6 @@ def lstm_prediction(coords_3d, future_frames):
             predicted_coords[:, keypoint, dim] = predicted_signal
 
     return predicted_coords
-
-
 def extrapolate_kinematics(kinematics, future_frames):
     """外推运动学参数"""
     # 基于当前趋势外推速度和加速度
@@ -12483,8 +12302,6 @@ def extrapolate_kinematics(kinematics, future_frames):
         'predicted_velocities': np.array(future_velocities),
         'predicted_accelerations': np.array(future_accelerations)
     }
-
-
 def calculate_prediction_confidence(historical_data, predicted_data):
     """计算预测置信度"""
     # 基于历史数据的变异性计算置信度
@@ -12498,8 +12315,6 @@ def calculate_prediction_confidence(historical_data, predicted_data):
         confidence = 0.5
 
     return min(1.0, max(0.0, confidence))
-
-
 def complete_missing_data(motion_data):
     """补全缺失数据"""
     print("- 执行缺失数据补全...")
@@ -12518,8 +12333,6 @@ def complete_missing_data(motion_data):
         'completed_coordinates': completed_coords,
         'completion_accuracy': calculate_completion_accuracy(coords_3d, completed_coords)
     }
-
-
 def introduce_missing_data(coords_3d, missing_ratio=0.1):
     """引入模拟的缺失数据"""
     coords_with_missing = coords_3d.copy()
@@ -12534,8 +12347,6 @@ def introduce_missing_data(coords_3d, missing_ratio=0.1):
         coords_with_missing[frame_idx, keypoint_idx, :] = np.nan
 
     return coords_with_missing
-
-
 def interpolate_missing_data(coords_with_missing):
     """插值补全缺失数据"""
     n_frames, n_keypoints, n_dims = coords_with_missing.shape
@@ -12559,8 +12370,6 @@ def interpolate_missing_data(coords_with_missing):
                     completed_coords[missing_indices, keypoint, dim] = interpolated_values
 
     return completed_coords
-
-
 def calculate_completion_accuracy(original, completed):
     """计算补全准确性"""
     mse = np.mean((original - completed) ** 2)
@@ -12572,8 +12381,6 @@ def calculate_completion_accuracy(original, completed):
         accuracy = 1.0
 
     return accuracy
-
-
 def classify_motion_patterns(motion_data):
     """分类运动模式"""
     print("- 执行运动模式分类...")
@@ -12593,8 +12400,6 @@ def classify_motion_patterns(motion_data):
         'classifications': classifications,
         'confidence_scores': confidence_scores
     }
-
-
 def extract_motion_features(motion_data):
     """提取运动特征"""
     coords_3d = motion_data['coordinates_3d']
@@ -12619,8 +12424,6 @@ def extract_motion_features(motion_data):
         features['dominant_frequencies'].append(dom_freq)
 
     return features
-
-
 def rule_based_classifier(features):
     """基于规则的分类器"""
     classifications = []
@@ -12645,8 +12448,6 @@ def rule_based_classifier(features):
         classifications.append(motion_class)
 
     return classifications
-
-
 def calculate_classification_confidence(features, classifications):
     """计算分类置信度"""
     confidence_scores = []
@@ -12674,8 +12475,6 @@ def calculate_classification_confidence(features, classifications):
         confidence_scores.append(min(1.0, max(0.0, confidence)))
 
     return confidence_scores
-
-
 def comprehensive_enhancement(motion_data):
     """综合增强 - 应用所有增强技术"""
     print("- 执行综合增强...")
@@ -12712,8 +12511,6 @@ def comprehensive_enhancement(motion_data):
     enhanced_results['enhancement_report'] = enhancement_report
 
     return enhanced_results
-
-
 def evaluate_comprehensive_quality(enhanced_results):
     """评估综合质量"""
     quality_metrics = {
@@ -12747,8 +12544,6 @@ def evaluate_comprehensive_quality(enhanced_results):
     quality_metrics['overall_enhancement_score'] = np.mean([s for s in scores if s > 0])
 
     return quality_metrics
-
-
 def generate_enhancement_report(enhanced_results):
     """生成增强报告"""
     report = {
@@ -12793,7 +12588,7 @@ def generate_enhancement_report(enhanced_results):
             report['recommendations'].append("数据质量较差，需要重新采集或更多预处理")
 
     return report
-
+# ==================== ui ====================
 class EnhancedDataAnalysisUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -15267,29 +15062,6 @@ class EnhancedDataAnalysisUI(QMainWindow):
             else:
                 # 恢复普通模式
                 self.confidence_threshold = 0.3
-
-
-import numpy as np
-import cv2
-from scipy import signal
-from scipy.spatial.distance import euclidean
-from sklearn.preprocessing import StandardScaler
-import json
-from datetime import datetime
-import logging
-from collections import deque
-import warnings
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
-
-# 设置日志
-logger = logging.getLogger(__name__)
-
-# 忽略一些常见的警告
-warnings.filterwarnings('ignore', category=RuntimeWarning)
-warnings.filterwarnings('ignore', category=np.RankWarning)
-
-
 # 设置matplotlib中文字体支持
 def setup_chinese_font():
     """设置matplotlib中文字体支持"""
@@ -15301,12 +15073,8 @@ def setup_chinese_font():
         # 如果中文字体不可用，使用默认字体
         plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
         logger.warning("中文字体不可用，使用默认字体")
-
-
 # 初始化字体设置
 setup_chinese_font()
-
-
 def safe_array_check(arr, condition_func):
     """安全的数组条件检查"""
     try:
@@ -15322,8 +15090,6 @@ def safe_array_check(arr, condition_func):
             return condition_func(arr)
     except Exception:
         return False
-
-
 def safe_confidence_check(keypoint, threshold=0.1):
     """安全的置信度检查"""
     try:
@@ -15340,8 +15106,6 @@ def safe_confidence_check(keypoint, threshold=0.1):
         return False
     except Exception:
         return False
-
-
 def safe_length_check(obj, min_length):
     """安全的长度检查"""
     try:
@@ -15352,8 +15116,6 @@ def safe_length_check(obj, min_length):
         return False
     except Exception:
         return False
-
-
 class FixedCoordinationAnalyzer:
     """修复的肢体协调性分析器 - 完整版"""
 
@@ -15792,8 +15554,6 @@ class FixedCoordinationAnalyzer:
         except Exception as e:
             logger.error(f"身体摆动稳定性计算失败: {e}")
             return None
-
-
 class FixedSymmetryAnalyzer:
     """修复的对称性分析器"""
 
@@ -16231,8 +15991,6 @@ class FixedSymmetryAnalyzer:
         except Exception as e:
             logger.error(f"身体轴线对齐计算失败: {e}")
             return None
-
-
 class SafeVisualizationManager:
     """安全的可视化管理器 - 修复内存泄漏和字体问题"""
 
@@ -16847,8 +16605,6 @@ def setup_application():
     """)
 
     return app
-
-
 def check_dependencies():
     """检查依赖项"""
     missing_deps = []
@@ -16877,8 +16633,6 @@ def check_dependencies():
         return False
 
     return True
-
-
 def show_splash_screen(app):
     """显示启动画面"""
     try:
@@ -16902,8 +16656,6 @@ def show_splash_screen(app):
 
     except Exception as e:
         logger.warning(f"启动画面显示失败: {str(e)}")
-
-
 def main():
     """主函数 - 添加全局清理"""
     try:
@@ -16956,8 +16708,6 @@ def main():
         logger.error(f"应用程序启动失败: {str(e)}")
         print(f"启动失败: {str(e)}")
         sys.exit(1)
-
-
 def handle_exception(exc_type, exc_value, exc_traceback):
     """改进的全局异常处理"""
     if issubclass(exc_type, KeyboardInterrupt):
@@ -16981,38 +16731,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         # 如果连错误对话框都显示不了，至少打印到控制台
         print(f"严重错误: {exc_type.__name__}: {exc_value}")
         print(f"错误对话框显示失败: {dialog_error}")
-
-
-class SystemConfig:
-    """系统配置管理"""
-
-    def __init__(self):
-        self.config_file = "config.json"
-        self.default_config = {
-            "analysis": {
-                "confidence_threshold": 0.3,
-                "smoothing_window": 5,
-                "fps_rate": 30
-            },
-            "ai_coach": {
-                "model_path": "models/coach_model.pkl",
-                "max_tokens": 1000
-            },
-            "visualization": {
-                "chart_style": "modern",
-                "color_scheme": "professional"
-            }
-        }
-
-    def load_config(self):
-        """载入配置"""
-        try:
-            with open(self.config_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return self.default_config
-
-
 # 建议：添加数据缓存和内存管理
 class DataCacheManager:
     """数据缓存管理器"""
@@ -17039,11 +16757,7 @@ class DataCacheManager:
 
         self.cache[frame_key] = analysis_result
         self.access_order.append(frame_key)
-
-
  # 建议：添加多线程处理
-
-
 class RealTimeProcessor(QThread):
     """实时处理线程"""
     analysis_ready = pyqtSignal(dict)
@@ -17073,14 +16787,13 @@ class RealTimeProcessor(QThread):
         """快速分析算法"""
         # 实现轻量级分析
         pass
-
 # 在主应用程序关闭时调用清理
 def cleanup_on_exit(self):
     """应用程序退出时的清理"""
     self._is_active = False
     self.stop_cleanup_timer()
     self.clear_cache()
-# ==================== 程序入口 ====================
+# ==================== 主程序 ====================
 if __name__ == '__main__':
     # 设置全局异常处理
     sys.excepthook = handle_exception
@@ -17130,6 +16843,30 @@ if __name__ == '__main__':
 
         # 继续原有的main逻辑
         # ...
+if __name__ == "__main__":
+    # 测试代码
+    print("CPU优化的matplotlib解决方案已加载")
+    print("使用 setup_cpu_optimized_plotting() 创建可视化器")
+    print("使用 safe_plot_motion_data() 进行线程安全的绘图")
+# 确保程序不会直接退出
+if __name__ == "__main__":
+    try:
+        # 您的主程序逻辑
+        print("🔄 正在启动用户界面...")
+
+        # 如果是GUI程序，确保有事件循环
+        # app.mainloop()  # 对于tkinter
+        # app.exec_()     # 对于PyQt
+
+        # 如果是命令行程序，添加用户交互
+        input("按Enter键退出...")
+
+    except Exception as e:
+        print(f"❌ 程序运行错误: {e}")
+        input("按Enter键退出...")
+
+
+
 def validate_3d_data(pose_3d):
     """验证3D数据有效性"""
     if pose_3d is None:
@@ -17151,8 +16888,6 @@ def validate_3d_data(pose_3d):
         return False, f"有效关键点太少: {valid_points}"
 
     return True, "数据有效"
-
-
 def run_complete_sequence_analysis_with_cache(self):
     """运行完整序列分析（带缓存优化）"""
     if not self.data or not self.athlete_profile:
@@ -17189,8 +16924,6 @@ def run_complete_sequence_analysis_with_cache(self):
         return True
 
     return False
-
-
 def export_sequence_analysis_results(self):
     """导出序列分析结果"""
     if not self.sequence_analysis_completed:
@@ -17228,8 +16961,6 @@ def export_sequence_analysis_results(self):
 
         except Exception as e:
             QMessageBox.warning(self, '错误', f'导出失败: {str(e)}')
-
-
 def _export_summary_to_csv(self, save_path, export_data):
     """导出摘要统计到CSV"""
     import csv
@@ -17258,8 +16989,6 @@ def _export_summary_to_csv(self, save_path, export_data):
                 f"{stats['max']:.2f}",
                 f"{stats['coefficient_variation']:.3f}"
             ])
-
-
 def validate_system_config(self):
     """验证系统配置"""
     errors = []
@@ -17282,7 +17011,6 @@ def validate_system_config(self):
             errors.append(f"缺少必要模块: {module_name}")
 
     return errors
-
 def safe_analysis_operation(func):
     """安全分析操作装饰器"""
     def wrapper(*args, **kwargs):
@@ -17298,9 +17026,7 @@ def safe_analysis_operation(func):
                               f'操作失败: {str(e)}')
             return None
     return wrapper
-
 import signal
-
 def signal_handler(signum, frame):
     """信号处理函数"""
     try:
@@ -17310,25 +17036,11 @@ def signal_handler(signum, frame):
         print(f"信号处理失败: {e}")
     finally:
         sys.exit(0)
-
 # 在main()函数开始时注册信号处理
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
-
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-import gc
-import threading
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.figure import Figure
-import weakref
-from collections import defaultdict
-
 # 设置matplotlib使用CPU后端，避免Qt相关问题
 matplotlib.use('Agg')  # 使用Anti-Grain Geometry后端，纯CPU渲染
-
-
 class CPUPlotManager:
     """CPU优化的图表管理器"""
 
@@ -17390,8 +17102,6 @@ class CPUPlotManager:
         """清理内存"""
         plt.close('all')
         gc.collect()
-
-
 class CPUMotionVisualizer:
     """CPU优化的运动可视化器"""
 
@@ -17610,8 +17320,6 @@ class CPUMotionVisualizer:
         """清理所有图表和内存"""
         self.plot_manager.close_all_figures()
         self.plot_manager.cleanup_memory()
-
-
 # 使用示例和最佳实践
 def setup_cpu_optimized_plotting():
     """设置CPU优化的绘图环境"""
@@ -17637,8 +17345,6 @@ def setup_cpu_optimized_plotting():
     })
 
     return CPUMotionVisualizer()
-
-
 # 线程安全的绘图函数
 def safe_plot_motion_data(motion_data, output_dir="./plots/"):
     """线程安全的运动数据绘图函数"""
@@ -17687,27 +17393,3 @@ def safe_plot_motion_data(motion_data, output_dir="./plots/"):
         gc.collect()
 
     return True
-
-
-if __name__ == "__main__":
-    # 测试代码
-    print("CPU优化的matplotlib解决方案已加载")
-    print("使用 setup_cpu_optimized_plotting() 创建可视化器")
-    print("使用 safe_plot_motion_data() 进行线程安全的绘图")
-
-# 确保程序不会直接退出
-if __name__ == "__main__":
-    try:
-        # 您的主程序逻辑
-        print("🔄 正在启动用户界面...")
-
-        # 如果是GUI程序，确保有事件循环
-        # app.mainloop()  # 对于tkinter
-        # app.exec_()     # 对于PyQt
-
-        # 如果是命令行程序，添加用户交互
-        input("按Enter键退出...")
-
-    except Exception as e:
-        print(f"❌ 程序运行错误: {e}")
-        input("按Enter键退出...")
